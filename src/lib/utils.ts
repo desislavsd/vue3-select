@@ -1,3 +1,6 @@
+import { Config, Select } from '@/types'
+import { PropType, SetupContext } from 'vue'
+
 export function get(
   path: Parameters<typeof toPath>[0],
   target: Record<any, any>
@@ -37,7 +40,7 @@ export async function fetch_<T = any>(url: string): Promise<T> {
   return await res.json()
 }
 
-export function isset(x: any) {
+export function isset(x: unknown) {
   return ![undefined, '', null, NaN].includes(x)
 }
 
@@ -61,4 +64,38 @@ export function debounce(t: number, f: (...args: any) => any, defaults: any) {
 
 export function me() {
   return arguments[0]
+}
+
+export function defaultsToProps<T extends Record<any, unknown>>(defaults: T) {
+  return Object.fromEntries(
+    Object.entries(defaults).map(([key, val]) => [
+      key,
+      { default: isPrimitive(val) ? val : () => val },
+    ])
+  ) as unknown as {
+    [key in keyof T]: PropType<T[key]>
+  }
+}
+
+class _defaultsToPropsHack<T extends Parameters<typeof defaultsToProps>[0]> {
+  // wrapped has no explicit return type so we can infer it
+  wrapped(e: T) {
+    return defaultsToProps<T>(e)
+  }
+}
+
+export type defaultsToPropsReturnType<
+  T extends Parameters<typeof defaultsToProps>[0]
+> = ReturnType<_defaultsToPropsHack<T>['wrapped']>
+
+export function defineHook<
+  K extends `${keyof Config}`,
+  T extends Record<any, unknown> = Pick<Config, K>,
+  U = (defaults: T, context: SetupContext, select: Partial<Select>) => any
+>(
+  defaults: T,
+  hook: U
+): U & { defaults: T; props: defaultsToPropsReturnType<T> } {
+  // @ts-ignore
+  return Object.assign(hook, { defaults, props: defaultsToProps(defaults) })
 }
