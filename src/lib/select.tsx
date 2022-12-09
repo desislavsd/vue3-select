@@ -1,22 +1,45 @@
-import { ref, watch } from 'vue'
+import { Ref, ref, watch, defineComponent } from 'vue'
+declare module '@/types' {
+  export interface Config {}
+  export interface Select {
+    phrase: Ref<string>
+  }
+}
 
-let hooks = import.meta.glob('./hooks/*.ts', { eager: true })
-hooks = Object.fromEntries(
-  Object.entries(hooks).map(([name, val]) => [name.split(/[\/.]/g).at(-2), val])
-)
-console.log(hooks)
+import itemDef from '@/hooks/item'
+import srcDef from '@/hooks/src'
+import itemsDef from '@/hooks/items'
+import modelDef from '@/hooks/model'
+import type { Config, Select } from '@/types'
+
+const defs = {
+  item: itemDef,
+  src: srcDef,
+  items: itemsDef,
+  model: modelDef,
+}
+
+console.log(defs)
+
 export default defineComponent({
   props: {
-    ...Object.assign({}, ...Object.values(hooks).map((e) => e.props)),
+    ...itemDef.props,
+    ...srcDef.props,
+    ...itemsDef.props,
+    ...modelDef.props,
   },
   setup(props, ctx) {
-    const expo = {
+    // @ts-ignore
+    const expo: Select = {
       phrase: ref('1'),
     }
-    ;['item', 'src', 'items', 'model'].reduce((expo, name) => {
-      expo[name] = hooks[name]?.default(props, ctx, expo)
-      return expo
-    }, expo)
+    Object.entries(defs).reduce(
+      (expo, [name, def]) =>
+        Object.assign(expo, {
+          [name]: def?.hook(props as unknown as Config, ctx, expo),
+        }),
+      expo
+    )
 
     ctx.expose(expo)
 

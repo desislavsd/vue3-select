@@ -1,57 +1,72 @@
+import { WithoutFirstParameter, Fn } from '@/types'
 import { computed, unref, reactive } from 'vue'
-import { get, toPath, me, isset } from '../utils'
+import { get, toPath, defineHook } from '../utils'
 
-export default function useItems(props, ctx, { src, phrase, item }) {
-  const parse = computed(() => normalizeParse(props.parse))
-
-  const parsed = computed(() =>
-    unref(parse)(src.data).map((e) => unref(item).ofRaw(e))
-  )
-
-  const filter = computed(() => {
-    if (!props.filter)
-      if (src.dynamic)
-        // auto decide if filter should be applied
-        // dynamic items are filtered serverside
-        return false
-
-    return normalizeFilter(props)
-  })
-
-  const filtered = computed(() => {
-    if (!unref(phrase) || !unref(filter)) return unref(parsed)
-
-    return unref(parsed).filter((item) => unref(filter)(item, unref(phrase)))
-  })
-
-  const tagged = computed(() => {
-    // TODO: add check if tagging is enabled
-    if (!props.tagging || !src.fetched || !unref(phrase)) return unref(filtered)
-
-    return unref(filtered).concat(unref(item).ofPhrase(unref(phrase)))
-  })
-
-  return reactive({
-    parsed,
-    filtered,
-    tagged,
-  })
+declare module '@/types' {
+  export interface Config {
+    parse?: string | typeof defaultParse
+    filter?: boolean | string | string[] | typeof defaultFilter
+    filterBy?: string | string[] | typeof defaultFilter
+    tagging?: boolean
+  }
+  export interface Select {
+    items: ReturnType<typeof definition['hook']>
+  }
 }
 
-export const props = {
-  parse: {},
-  filter: {
-    type: [Boolean, String, Array, Function],
+const definition = defineHook(
+  {
+    parse: defaultParse,
+    filter: undefined,
+    filterBy: undefined,
+    tagging: undefined,
   },
-  filterBy: {
-    type: [String, Array, Function],
-  },
-  tagging: {
-    type: Boolean,
-  },
-}
+  (props, ctx, { src, phrase, item }) => {
+    const parse = computed(() => normalizeParse(props.parse))
 
-function normalizeParse(parse: any) {
+    const parsed = computed(() =>
+      (unref(parse)(src.data) as unknown[]).map((e) => unref(item).ofRaw(e))
+    )
+
+    const filter = computed(() => {
+      if (!props.filter)
+        if (src.dynamic)
+          // auto decide if filter should be applied
+          // dynamic items are filtered serverside
+          return false
+
+      return normalizeFilter(props)
+    })
+
+    const filtered = computed(() => {
+      if (!unref(phrase) || !unref(filter)) return unref(parsed)
+
+      return unref(parsed).filter((item) =>
+        (unref(filter) as Fn<boolean>)(item, unref(phrase))
+      )
+    })
+
+    const tagged = computed(() => {
+      // TODO: add check if tagging is enabled
+      if (!props.tagging || !src.fetched || !unref(phrase))
+        return unref(filtered)
+
+      return unref(filtered).concat(unref(item).ofPhrase(unref(phrase)))
+    })
+
+    return reactive({
+      parsed,
+      filtered,
+      tagged,
+    })
+  }
+)
+
+definition.props.tagging.type = Boolean
+
+export default definition
+
+function normalizeParse(parse: unknown) {
   if (typeof parse == 'function') return parse
 
   if (typeof parse == 'string') return get.bind(null, toPath(parse))
@@ -60,7 +75,7 @@ function normalizeParse(parse: any) {
 }
 
 // finds array of items in api response
-function defaultParse(res: any): any[] {
+function defaultParse(res: any): unknown[] {
   return (
     [res]
       .concat(Object.values(res || []))
@@ -96,4 +111,8 @@ function filterByProps(props: string[], item: any, phrase: string) {
     )
     .flat()
     .some((prop) => get(prop, item)?.toString().toLowerCase().includes(phrase))
+}
+
+function defaultFilter(...args: WithoutFirstParameter<typeof filterByProps>) {
+  return filterByProps(['label'], ...args)
 }

@@ -1,50 +1,57 @@
 import { computed, toRefs, watch, unref, reactive } from 'vue'
-import { fetch_ } from '../utils'
+import { fetch_, defineHook } from '../utils'
 import { useAsyncData } from '../capi'
-
-type SrcType = string | any[] | ((...args: any[]) => any)
-
-export default function useSrc(props, context, { accessors, phrase }) {
-  const async = computed(() => isSrcAsync(props.src))
-
-  const dynamic = computed(() => isSrcDynamic(props.src))
-
-  const src = computed(() => {
-    const { src, fetcher } = props
-
-    if (typeof src == 'function') return src
-
-    if (typeof src != 'string') return () => src || []
-
-    return fetcher.bind(null, src)
-  })
-
-  // load fn is changed on each src change
-  const load = computed(() => {
-    const cb = unref(src)
-    return (key) => cb(unref(key)[0] || '')
-  })
-
-  const key = computed(() => (unref(dynamic) ? [unref(phrase)] : []))
-
-  // TODO: enabled should depend on more stuff ( focused, valid, not disabled/readonly)
-  const opts = computed(() => ({ enabled: true || !unref(async) }))
-
-  const state = reactive({
-    async,
-    dynamic,
-    ...toRefs(useAsyncData(key, load, opts)),
-  })
-
-  return state
+import { Fn } from '@/types'
+declare module '@/types' {
+  export interface Config {
+    src?: string | any[] | Fn
+    fetcher: typeof fetcher
+  }
+  export interface Select {
+    src: ReturnType<typeof definition['hook']>
+  }
 }
+type s = keyof {}
 
-export const props = {
-  src: {},
-  fetcher: {
-    default: () => fetcher,
+const definition = defineHook(
+  {
+    src: undefined,
+    fetcher,
   },
-}
+  function (props, context, { phrase }) {
+    const async = computed(() => isSrcAsync(props.src))
+    const dynamic = computed(() => isSrcDynamic(props.src))
+
+    const src = computed(() => {
+      const { src, fetcher } = props
+
+      if (typeof src == 'function') return src
+
+      if (typeof src != 'string') return () => src || []
+
+      return fetcher.bind(null, src)
+    })
+
+    const key = computed(() => (unref(dynamic) ? [unref(phrase)] : []))
+
+    // load fn is changed on each src change
+    const load = computed(() => {
+      const cb = unref(src)
+      return (k: typeof key) => cb(unref(k)[0] || '')
+    })
+
+    // TODO: enabled should depend on more stuff ( focused, valid, not disabled/readonly)
+    const opts = computed(() => ({ enabled: true || !unref(async) }))
+
+    return reactive({
+      async,
+      dynamic,
+      ...toRefs(useAsyncData(key, load, opts)),
+    })
+  }
+)
+
+export default definition
 
 // check weather options depend on the query
 // i.e. returns true for paginated results

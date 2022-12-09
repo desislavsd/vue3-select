@@ -88,14 +88,40 @@ export type defaultsToPropsReturnType<
   T extends Parameters<typeof defaultsToProps>[0]
 > = ReturnType<_defaultsToPropsHack<T>['wrapped']>
 
+/* export function defineHook<
+  T extends Config,
+  U extends (
+    defaults: T,
+    context: SetupContext,
+    select: Partial<Select>
+  ) => unknown
+>(defaults: Partial<T>, hook: U) {
+  return { hook, defaults, props: defaultsToProps(defaults) }
+}
+
+export function defineHookFor<
+  KS extends (keyof Config)[],
+  K extends KS[number]
+>(keys: KS) {
+  return function defineHook<
+    T extends Pick<Config, K>,
+    U extends (
+      defaults: Pick<Config, K>,
+      context: SetupContext,
+      select: Partial<Select>
+    ) => unknown
+  >(defaults: T, hook: U) {
+    return { hook, defaults, props: defaultsToProps(defaults) }
+  }
+} */
 export function defineHook<
-  K extends `${keyof Config}`,
-  T extends Record<any, unknown> = Pick<Config, K>,
-  U = (defaults: T, context: SetupContext, select: Partial<Select>) => any
->(
-  defaults: T,
-  hook: U
-): U & { defaults: T; props: defaultsToPropsReturnType<T> } {
-  // @ts-ignore
-  return Object.assign(hook, { defaults, props: defaultsToProps(defaults) })
+  T extends Partial<Config>,
+  U extends (
+    // @ts-ignore
+    defaults: keyof T extends never ? Config : Pick<Config, keyof T>,
+    context: SetupContext,
+    select: Select
+  ) => unknown
+>(defaults: T, hook: U) {
+  return { hook, defaults, props: defaultsToProps(defaults) }
 }

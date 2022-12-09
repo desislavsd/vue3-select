@@ -1,9 +1,18 @@
-import { computed, reactive, unref } from 'vue'
-import { getSet, toPath, me } from '../utils'
+import { Config } from '@/types'
+import { computed, unref } from 'vue'
+import { getSet, toPath, defineHook } from '../utils'
 
 const ERRORS = {
   EXPECT_NONPRIMITIVE:
     'Trying to set primitive value, but non primitive is expected. Check if `as` configuration matches your model value',
+}
+declare module '@/types' {
+  export interface Config {
+    as?: string | string[] | ((item: Record<any, any>) => any)[]
+  }
+  export interface Select {
+    item: ReturnType<typeof definition['hook']>
+  }
 }
 
 export const spec = {
@@ -15,7 +24,8 @@ class Item {
   label: unknown
   index: unknown
   value: unknown
-  raw: unknown
+  raw: unknown;
+  [key: string]: unknown
 
   constructor(data?: unknown) {
     Object.assign(this, data /* , { state: {} } */)
@@ -39,7 +49,7 @@ class Item {
     data.value ??= data.label
     data.index ??= data.label
 
-    return Object.assign(new this(data), opts)
+    return Object.assign(new this(data), opts) as Item
   }
 
   static ofValue(value: unknown) {
@@ -77,11 +87,7 @@ class Item {
   }
 }
 
-type PropsType = {
-  as?: string | string[] | ((item: Record<any, any>) => any)[]
-}
-
-function useAs(props: PropsType) {
+function useAs(props: Pick<Config, 'as'>) {
   return computed(() => {
     let { as = [] } = props
 
@@ -110,17 +116,22 @@ function useAs(props: PropsType) {
   })
 }
 
-export default function useItem(props: PropsType) {
-  const as = useAs(props)
-  return computed(
-    () =>
-      class extends Item {
-        static as: typeof Item['as'] = unref(as)
-      }
-  )
-}
+const definition = defineHook(
+  {
+    as: undefined,
+  },
+  (props) => {
+    const as = useAs(props)
+    return computed(
+      () =>
+        class extends Item {
+          static as: typeof Item['as'] = unref(as)
+        }
+    )
+  }
+)
 
-export const props = { as: {} } as PropsType
+export default definition
 
 if (import.meta.vitest) {
   const { it, test, expect, describe } = import.meta.vitest
@@ -225,7 +236,8 @@ if (import.meta.vitest) {
 
     Object.entries(tests).forEach(([name, vars]) => {
       it(`Auto ${name}`, () => {
-        const Item = unref(useItem({ as: vars.as }))
+        // @ts-ignore
+        const Item = unref(definition.hook({ as: vars.as }))
         const item = Item[vars.method || 'ofRaw'](vars.shape)
         const res = {
           poor: Item.as.poor,
