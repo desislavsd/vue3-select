@@ -1,19 +1,51 @@
 <script setup lang="ts">
-function src() {
-  let query
+const items = [
+  { id: Math.random(), name: { first: 'Deso' } },
+  { id: Math.random(), name: { first: '123' } },
+  { id: Math.random(), name: { first: 'Ili' } },
+]
+
+function staticSrc() {
+  return dynamicSrc('')
+}
+
+function dynamicSrc(query) {
   return new Promise((rs, rj) => {
     setTimeout(() => {
       1 || Math.round(Math.random()) > 0
-        ? rs([1, 2, 3].filter((e) => !query || e.toString().includes(query)))
+        ? rs(items.filter((e) => !query || e.name.toString().includes(query)))
         : rj('Oops..')
-    }, 2000)
+    }, 0 * 2000)
   })
 }
+
+const opts = {
+  'Dynamic src': {
+    src: dynamicSrc,
+  },
+  'Static src': {
+    src: staticSrc,
+  },
+}
+const opt = ref(null)
+
+const model = ref()
 </script>
 
 <template>
   <div>
-    <VueSelect :src="src"></VueSelect>
+    <label v-for="(o, name) in opts"
+      >{{ name }} <input type="radio" v-model="opt" :value="o"
+    /></label>
+    <br />
+    <hr />
+    <br />
+    <VueSelect
+      v-model="model"
+      v-bind="opt"
+      as="name.first::id"
+      tagging
+    ></VueSelect>
   </div>
 </template>
 <style>

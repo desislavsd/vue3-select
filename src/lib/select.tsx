@@ -13,7 +13,7 @@ export default defineComponent({
     const expo = {
       phrase: ref('1'),
     }
-    ;['item', 'src', 'items'].reduce((expo, name) => {
+    ;['item', 'src', 'items', 'model'].reduce((expo, name) => {
       expo[name] = hooks[name]?.default(props, ctx, expo)
       return expo
     }, expo)
@@ -22,22 +22,33 @@ export default defineComponent({
 
     // watch(expo.phrase, (phrase) => expo.src.refresh(unref(phrase)))
 
-    console.log(expo)
+    function select(items = expo.items.tagged) {
+      expo.model.value = expo.model.isMultiple
+        ? expo.model.value.concat(items)
+        : items
+    }
 
     return () => {
       return (
-        <div>
-          <input
-            v-model={expo.phrase.value}
-            onFocus={() =>
-              expo.src.stale &&
-              !expo.src.busy &&
-              expo.src.refresh(unref(expo.phrase))
-            }
-          />
-          <pre>{JSON.stringify(expo.src, null, 4)}</pre>
-          <pre>{JSON.stringify(expo.items.filtered, null, 4)}</pre>
-          <button onClick={() => expo.src.refresh()}>click</button>
+        <div style="display: flex; gap: 10px">
+          <div style="flex:1">
+            <input
+              v-model={expo.phrase.value}
+              onFocus={() =>
+                expo.src.stale &&
+                !expo.src.busy &&
+                expo.src.refresh(unref(expo.phrase))
+              }
+              onKeydown={(ev) => ev.key == 'Enter' && select()}
+            />
+            <pre>{JSON.stringify(props.modelValue, null, 4)}</pre>
+          </div>
+          <div style="flex:1">
+            <button onClick={() => expo.src.refresh()}>click</button>
+            <pre>Model: {JSON.stringify(expo.model?.value, null, 4)}</pre>
+            <pre>Src: {JSON.stringify(expo.src, null, 4)}</pre>
+            <pre>Filtered: {JSON.stringify(expo.items.tagged, null, 4)}</pre>
+          </div>
         </div>
       )
     }

@@ -70,6 +70,11 @@ class Item {
 
     return this.ofRaw(raw, { poor: as.poor, new: true })
   }
+
+  equals(item: any) {
+    if (!(item instanceof Item)) item = this.constructor.ofValue(item)
+    return this.index == item.index
+  }
 }
 
 type PropsType = {

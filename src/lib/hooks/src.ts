@@ -19,12 +19,21 @@ export default function useSrc(props, context, { accessors, phrase }) {
     return fetcher.bind(null, src)
   })
 
-  // const load = computed(() => () => unref(src)(unref(phrase)))
+  // load fn is changed on each src change
+  const load = computed(() => {
+    const cb = unref(src)
+    return (key) => cb(unref(key)[0] || '')
+  })
+
+  const key = computed(() => (unref(dynamic) ? [unref(phrase)] : []))
+
+  // TODO: enabled should depend on more stuff ( focused, valid, not disabled/readonly)
+  const opts = computed(() => ({ enabled: true || !unref(async) }))
 
   const state = reactive({
     async,
     dynamic,
-    ...toRefs(useAsyncData(src, { enabled: !unref(async) })),
+    ...toRefs(useAsyncData(key, load, opts)),
   })
 
   return state

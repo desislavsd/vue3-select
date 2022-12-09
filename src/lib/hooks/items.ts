@@ -24,9 +24,17 @@ export default function useItems(props, ctx, { src, phrase, item }) {
     return unref(parsed).filter((item) => unref(filter)(item, unref(phrase)))
   })
 
+  const tagged = computed(() => {
+    // TODO: add check if tagging is enabled
+    if (!props.tagging || !src.fetched || !unref(phrase)) return unref(filtered)
+
+    return unref(filtered).concat(unref(item).ofPhrase(unref(phrase)))
+  })
+
   return reactive({
     parsed,
     filtered,
+    tagged,
   })
 }
 
@@ -37,6 +45,9 @@ export const props = {
   },
   filterBy: {
     type: [String, Array, Function],
+  },
+  tagging: {
+    type: Boolean,
   },
 }
 
