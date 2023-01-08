@@ -1,5 +1,5 @@
-import type { Config, Select } from '@/types'
-import { provide, inject, InjectionKey } from 'vue'
+import type { Config, SelectService, UpdateHandler } from '@/types'
+import { ref, provide, inject, InjectionKey } from 'vue'
 import { defineHook, isset } from '../utils'
 
 import item from '@/hooks/item'
@@ -7,27 +7,58 @@ import src from '@/hooks/src'
 import items from '@/hooks/items'
 import model from '@/hooks/model'
 import ui from '@/hooks/ui'
+import { useVModel } from '@/capi'
+import { MaybeRef } from '@vueuse/core'
+
+const phrase = defineHook(
+  {
+    phrase: '' as MaybeRef<string | undefined>,
+    'onUpdate:phrase': undefined as undefined | UpdateHandler,
+  },
+  (props) => useVModel(props, 'phrase', { defaultValue: '' })
+)
+
+const map = { phrase, item, src, items, model, ui } as const
+
+export const config = {
+  ...phrase.defaults,
+  ...item.defaults,
+  ...src.defaults,
+  ...items.defaults,
+  ...model.defaults,
+  ...ui.defaults,
+}
+
+export const props = {
+  ...phrase.props,
+  ...item.props,
+  ...src.props,
+  ...items.props,
+  ...model.props,
+  ...ui.props,
+}
 
 declare module '@/types' {
-  export interface Select {
-    model: ReturnType<typeof model['hook']>
+  export type Config = typeof config
+  export interface SelectService {
+    phrase: ReturnType<typeof phrase['hook']>
     item: ReturnType<typeof item['hook']>
     src: ReturnType<typeof src['hook']>
-    ui: ReturnType<typeof ui['hook']>
     items: ReturnType<typeof items['hook']>
+    model: ReturnType<typeof model['hook']>
+    ui: ReturnType<typeof ui['hook']>
   }
 }
 
-const definition = defineHook({}, function (props, ctx) {
-  return Object.entries({ item, src, items, model, ui }).reduce(
-    (m, [name, def]) => ({
-      ...m,
-      [name]: def.hook(props, ctx, m as Select),
-    }),
-    {}
-  ) as unknown as Select
-})
-
-// useSelect({
-// no service instance makes sense to be provided here...
-// })
+export default Object.assign(
+  defineHook(config as Config, function (props, ctx) {
+    return Object.entries(map).reduce(
+      (m, [name, def]) => ({
+        ...m,
+        [name]: def.hook(props, ctx, m as SelectService),
+      }),
+      {}
+    ) as unknown as SelectService
+  }),
+  { props }
+)

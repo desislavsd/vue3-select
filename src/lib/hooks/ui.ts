@@ -1,4 +1,4 @@
-import { MaybeRef, Select, Item } from '@/types'
+import { MaybeRef, SelectService, Item } from '@/types'
 import {
   reactive,
   unref,
@@ -9,13 +9,6 @@ import {
   onMounted,
 } from 'vue'
 import { defineHook, isset } from '../utils'
-
-declare module '@/types' {
-  export interface Config {}
-  export interface Select {
-    ui: ReturnType<typeof definition['hook']>
-  }
-}
 
 const definition = defineHook(
   {},
@@ -157,7 +150,7 @@ const definition = defineHook(
 
 export default definition
 
-function usePointer(items: MaybeRef<Select['items']['done']>) {
+function usePointer(items: MaybeRef<SelectService['items']['done']>) {
   const _index = ref(-1)
 
   const index = computed({

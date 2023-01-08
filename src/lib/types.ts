@@ -1,8 +1,6 @@
 import { Ref } from 'vue'
 
-export interface Config {}
-
-export interface Select {}
+export interface SelectService {}
 
 export type MaybeRef<T> = T | Ref<T>
 
@@ -14,4 +12,9 @@ export type WithoutFirstParameter<F extends Fn> = WithoutFirst<Parameters<F>>
 
 export type Fn<R = unknown> = (...args: any[]) => R
 
-export type Item = Select['items']['done'][number]
+export type Item = SelectService['items']['done'][number]
+
+export type UpdateHandler = (
+  value: unknown,
+  context: { service: SelectService }
+) => void

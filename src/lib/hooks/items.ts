@@ -1,17 +1,12 @@
-import { WithoutFirstParameter, Fn, MaybeRef, Select } from '@/types'
+import { WithoutFirstParameter, Fn, MaybeRef, SelectService } from '@/types'
 import { computed, unref, reactive, ref, watch } from 'vue'
 import { get, toPath, defineHook, isset } from '../utils'
 
-declare module '@/types' {
-  export interface Config {
-    parse?: string | typeof defaultParse
-    filter?: boolean | string | string[] | typeof defaultFilter
-    filterBy?: string | string[] | typeof defaultFilter
-    tagging?: boolean
-  }
-  export interface Select {
-    items: ReturnType<typeof definition['hook']>
-  }
+type Props = {
+  parse: undefined | string | typeof defaultParse
+  filter: undefined | boolean | string | string[] | typeof defaultFilter
+  filterBy: undefined | string | string[] | typeof defaultFilter
+  tagging: undefined | boolean
 }
 
 const definition = defineHook(
@@ -20,7 +15,7 @@ const definition = defineHook(
     filter: undefined,
     filterBy: undefined,
     tagging: undefined,
-  },
+  } as Props,
   (props, ctx, { src, phrase, item }) => {
     const parse = computed(() => normalizeParse(props.parse))
 
@@ -50,10 +45,14 @@ const definition = defineHook(
       // TODO: add check if tagging is enabled
       if (!props.tagging || !src.fetched || !unref(phrase)) return []
 
-      return [unref(item).ofPhrase(unref(phrase))]
+      const tag = unref(item).ofPhrase(unref(phrase))
+
+      if (unref(filtered).some((e) => e.matches(tag))) return []
+
+      return [tag]
     })
 
-    const done = computed(() => unref(filtered).concat(unref(tags)))
+    const done = computed(() => unref(tags).concat(unref(filtered)))
 
     return reactive({
       parsed,

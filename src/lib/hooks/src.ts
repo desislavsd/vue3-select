@@ -2,20 +2,10 @@ import { computed, toRefs, watch, unref, reactive } from 'vue'
 import { fetch_, defineHook } from '../utils'
 import { useAsyncData } from '../capi'
 import { Fn } from '@/types'
-declare module '@/types' {
-  export interface Config {
-    src?: string | any[] | Fn
-    fetcher: typeof fetcher
-  }
-  export interface Select {
-    src: ReturnType<typeof definition['hook']>
-  }
-}
-type s = keyof {}
 
 const definition = defineHook(
   {
-    src: undefined,
+    src: undefined as undefined | string | any[] | Fn,
     fetcher,
   },
   function (props, context, { phrase }) {

@@ -1,32 +1,42 @@
 <script lang="tsx">
-import { defineComponent, PropType } from 'vue'
-import { Select } from '@/types'
+import { defineComponent, PropType, InjectionKey, provide } from 'vue'
+import serviceDef from '@/hooks'
+import { SelectService } from '@/types'
+
+const serviceKey = Symbol() as InjectionKey<SelectService>
+
 export default defineComponent({
   name: 'Select',
   props: {
-    expo: {} as PropType<Select>,
+    ...serviceDef.props,
+    service: {} as PropType<SelectService>,
     class: {},
   },
   inheritAttrs: false,
-  setup(props, { attrs }) {
+  setup(props, ctx) {
+    const service = props.service || serviceDef.hook(props, ctx)
+
+    provide(serviceKey, service)
+
+    const { attrs } = ctx
+
     return () => {
-      const { expo } = props
-
-      if (!expo) return null
-
-      const { items, ui } = expo
+      const { items, ui } = service
       const { pointer } = ui
 
       return (
         <div
-          class={['vue3-select relative text-black text-sm', props.class]}
+          class={[
+            'vue3-select max-w-md mb-30 relative text-black text-sm',
+            props.class,
+          ]}
           {...ui.attrs.root}
         >
           <div class="flex flex-wrap gap-1 bg-white p-1 rounded-sm">
-            {expo.model.value.map((e, i) => (
+            {service.model.value.map((e, i) => (
               <span
                 class="vue3-select__selected grid items-center text-sm px-2 py-1 bg-yellow-500 hover:bg-yellow-600 rounded-sm cursor-pointer"
-                onClick={() => expo.model.remove(i)}
+                onClick={() => service.model.remove(i)}
               >
                 {e.label}
               </span>

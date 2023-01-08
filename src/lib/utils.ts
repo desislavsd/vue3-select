@@ -1,4 +1,4 @@
-import { Config, Select } from '@/types'
+import { Config, SelectService } from '@/types'
 import { PropType, SetupContext } from 'vue'
 
 export function get(
@@ -66,7 +66,7 @@ export function me() {
   return arguments[0]
 }
 
-export function defaultsToProps<T extends Record<any, unknown>>(defaults: T) {
+export function defaultsToProps<T extends object>(defaults: T) {
   return Object.fromEntries(
     Object.entries(defaults).map(([key, val]) => [
       key,
@@ -78,12 +78,12 @@ export function defaultsToProps<T extends Record<any, unknown>>(defaults: T) {
 }
 
 export function defineHook<
-  T extends Partial<Config>,
+  T extends object, // extends Partial<Config>,
   U extends (
     // @ts-ignore
-    defaults: keyof T extends never ? Config : Pick<Config, keyof T>,
+    defaults: Partial<T>, //keyof T extends never ? Config : Pick<Config, keyof T>,
     context: SetupContext,
-    select: Select
+    service: SelectService
   ) => unknown
 >(defaults: T, hook: U) {
   return { hook, defaults, props: defaultsToProps(defaults) }

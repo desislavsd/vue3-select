@@ -10,6 +10,7 @@ import {
 } from 'vue'
 import { MaybeRef } from '@/types'
 import { reactiveComputed } from '@vueuse/core'
+import { isset } from '@/utils'
 
 const defaults = { enabled: true }
 
@@ -52,4 +53,39 @@ export function useAsyncData(
   const expo = reactiveComputed(() => ({ ...state.value, refresh }))
 
   return expo
+}
+
+export function useVModel<
+  T extends { [key: string]: unknown },
+  K extends keyof T & string,
+  V extends T[K]
+>(
+  props: T,
+  prop: K,
+  { defaultValue } = {
+    defaultValue: undefined as V,
+  }
+) {
+  const updateKey = computed(() => `onUpdate:${prop?.toString()}`)
+
+  const propValue = computed(() => unref(props[prop]))
+
+  const mustProxy = computed(() => !isset(props[unref(updateKey)]))
+
+  const proxy = ref(unref(propValue) ?? defaultValue)
+
+  watch(propValue, (value) => (proxy.value = value))
+
+  const model = computed({
+    get() {
+      return unref(mustProxy) ? unref(proxy) : unref(propValue)
+    },
+    set(value) {
+      unref(mustProxy)
+        ? (proxy.value = value)
+        : props[unref(updateKey)]?.(value)
+    },
+  })
+
+  return model
 }

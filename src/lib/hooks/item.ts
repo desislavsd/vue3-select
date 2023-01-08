@@ -1,4 +1,3 @@
-import { Config } from '@/types'
 import { computed, unref } from 'vue'
 import { getSet, toPath, defineHook } from '../utils'
 
@@ -6,13 +5,9 @@ const ERRORS = {
   EXPECT_NONPRIMITIVE:
     'Trying to set primitive value, but non primitive is expected. Check if `as` configuration matches your model value',
 }
-declare module '@/types' {
-  export interface Config {
-    as?: string | string[] | typeof getSet[]
-  }
-  export interface Select {
-    item: ReturnType<typeof definition['hook']>
-  }
+
+type Props = {
+  as: undefined | string | string[] | typeof getSet[]
 }
 
 export const spec = {
@@ -86,9 +81,16 @@ class Item {
     if (!(item instanceof Item)) item = this.constructor.ofValue(item)
     return this.index == item.index
   }
+
+  matches(item: Item) {
+    return (
+      item.label?.toString()?.toLowerCase() ===
+      this.label?.toString()?.toLowerCase()
+    )
+  }
 }
 
-function useAs(props: Pick<Config, 'as'>) {
+function useAs(props: Props) {
   return computed(() => {
     let { as = [] } = props
 
@@ -105,7 +107,10 @@ function useAs(props: Pick<Config, 'as'>) {
           ? getSet.bind(null, toPath(as[i]))
           : undefined,
       ])
-    ) as Record<typeof spec.order[number], any>
+    ) as Record<
+      typeof spec.order[number],
+      (target: Record<any, any>, value?: any) => any
+    >
 
     const poor = primitive ? false : !!models.value
 
@@ -120,7 +125,7 @@ function useAs(props: Pick<Config, 'as'>) {
 const definition = defineHook(
   {
     as: undefined,
-  },
+  } as Props,
   (props) => {
     const as = useAs(props)
     return computed(

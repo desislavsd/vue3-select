@@ -1,35 +1,27 @@
-import { Item } from '@/types'
+import { Item, MaybeRef, UpdateHandler } from '@/types'
 import { reactive, unref, ref, computed } from 'vue'
 import { defineHook, isset } from '../utils'
-
-declare module '@/types' {
-  export interface Config {
-    multiple?: boolean
-    modelValue?: unknown
-    'onUpdate:modelValue': (value: unknown, select: Select) => void
-  }
-  // export interface Select {
-  //   model: ReturnType<typeof definition['hook']>
-  // }
-}
-
+import { SelectService } from '@/types'
+import { useVModel } from '@/capi'
 // TODO:
 // - add statefull support
 // - local model value should consist of Items, not Items.value
 const definition = defineHook(
   {
-    multiple: undefined,
-    modelValue: undefined,
-    'onUpdate:modelValue': undefined,
+    multiple: undefined as boolean | undefined,
+    modelValue: undefined as MaybeRef<unknown>,
+    'onUpdate:modelValue': undefined as undefined | UpdateHandler,
   },
   function (props, context, { items, item }) {
     const isMultiple = computed(
       () => props.multiple === true || Array.isArray(props.modelValue)
     )
 
+    const proxy = useVModel(props, 'modelValue')
+
     const model = computed<Item[]>({
       get(): Item[] {
-        const v = props.modelValue
+        const v = proxy.value
         // model value is normalized to array for unified internal usage
         return [v]
           .flat()
@@ -45,10 +37,7 @@ const definition = defineHook(
           .filter(isset)
           .map((e) => e.value)
 
-        props['onUpdate:modelValue']?.(
-          unref(isMultiple) ? newValue : newValue[0],
-          arguments[1]
-        )
+        proxy.value = unref(isMultiple) ? newValue : newValue[0]
       },
     })
 
