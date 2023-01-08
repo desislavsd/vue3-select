@@ -77,43 +77,6 @@ export function defaultsToProps<T extends Record<any, unknown>>(defaults: T) {
   }
 }
 
-class _defaultsToPropsHack<T extends Parameters<typeof defaultsToProps>[0]> {
-  // wrapped has no explicit return type so we can infer it
-  wrapped(e: T) {
-    return defaultsToProps<T>(e)
-  }
-}
-
-export type defaultsToPropsReturnType<
-  T extends Parameters<typeof defaultsToProps>[0]
-> = ReturnType<_defaultsToPropsHack<T>['wrapped']>
-
-/* export function defineHook<
-  T extends Config,
-  U extends (
-    defaults: T,
-    context: SetupContext,
-    select: Partial<Select>
-  ) => unknown
->(defaults: Partial<T>, hook: U) {
-  return { hook, defaults, props: defaultsToProps(defaults) }
-}
-
-export function defineHookFor<
-  KS extends (keyof Config)[],
-  K extends KS[number]
->(keys: KS) {
-  return function defineHook<
-    T extends Pick<Config, K>,
-    U extends (
-      defaults: Pick<Config, K>,
-      context: SetupContext,
-      select: Partial<Select>
-    ) => unknown
-  >(defaults: T, hook: U) {
-    return { hook, defaults, props: defaultsToProps(defaults) }
-  }
-} */
 export function defineHook<
   T extends Partial<Config>,
   U extends (

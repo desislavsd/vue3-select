@@ -13,3 +13,5 @@ export type WithoutFirst<T extends unknown[]> = T extends [any, ...infer L]
 export type WithoutFirstParameter<F extends Fn> = WithoutFirst<Parameters<F>>
 
 export type Fn<R = unknown> = (...args: any[]) => R
+
+export type Item = Select['items']['done'][number]

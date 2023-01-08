@@ -1,6 +1,6 @@
-import { WithoutFirstParameter, Fn } from '@/types'
-import { computed, unref, reactive } from 'vue'
-import { get, toPath, defineHook } from '../utils'
+import { WithoutFirstParameter, Fn, MaybeRef, Select } from '@/types'
+import { computed, unref, reactive, ref, watch } from 'vue'
+import { get, toPath, defineHook, isset } from '../utils'
 
 declare module '@/types' {
   export interface Config {
@@ -46,22 +46,25 @@ const definition = defineHook(
       )
     })
 
-    const tagged = computed(() => {
+    const tags = computed(() => {
       // TODO: add check if tagging is enabled
-      if (!props.tagging || !src.fetched || !unref(phrase))
-        return unref(filtered)
+      if (!props.tagging || !src.fetched || !unref(phrase)) return []
 
-      return unref(filtered).concat(unref(item).ofPhrase(unref(phrase)))
+      return [unref(item).ofPhrase(unref(phrase))]
     })
+
+    const done = computed(() => unref(filtered).concat(unref(tags)))
 
     return reactive({
       parsed,
       filtered,
-      tagged,
+      tags,
+      done,
     })
   }
 )
 
+// @ts-ignore
 definition.props.tagging.type = Boolean
 
 export default definition

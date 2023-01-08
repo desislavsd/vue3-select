@@ -8,7 +8,7 @@ const ERRORS = {
 }
 declare module '@/types' {
   export interface Config {
-    as?: string | string[] | ((item: Record<any, any>) => any)[]
+    as?: string | string[] | typeof getSet[]
   }
   export interface Select {
     item: ReturnType<typeof definition['hook']>
@@ -81,6 +81,7 @@ class Item {
     return this.ofRaw(raw, { poor: as.poor, new: true })
   }
 
+  // TODO: support non primitive comparisons
   equals(item: any) {
     if (!(item instanceof Item)) item = this.constructor.ofValue(item)
     return this.index == item.index

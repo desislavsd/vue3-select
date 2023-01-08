@@ -8,46 +8,9 @@ import {
   watch,
   Ref,
 } from 'vue'
-import { MaybeRef } from './types'
+import { MaybeRef } from '@/types'
 import { reactiveComputed } from '@vueuse/core'
-// export function useAsyncData(
-//   // key: MaybeRef<unknown[]>,
-//   cb: MaybeRef<(...any: any) => any>,
-//   opts: { enabled: boolean }
-// ) {
-//   const defaults = {
-//     data: null,
-//     error: null,
-//     busy: false,
-//     fetched: false,
-//     stale: true,
-//     key: null,
-//   }
 
-//   const state = reactive({ ...defaults, refresh })
-
-//   // const keyStr = computed(() => JSON.stringify(unref(key)))
-
-//   function refresh(...args: any) {
-//     let key = Math.random()
-//     Object.assign(state, defaults, { busy: true, key })
-//     Promise.resolve(unref(cb)(...args))
-//       .then(
-//         (data) =>
-//           key == state.key && Object.assign(state, { data, stale: false })
-//       )
-//       .catch((error) => key == state.key && (state.error = error))
-//       .finally(
-//         () =>
-//           key == state.key &&
-//           Object.assign(state, { fetched: true, busy: false })
-//       )
-//   }
-
-//   watch(cb, () => refresh(), { immediate: opts.enabled })
-
-//   return state
-// }
 const defaults = { enabled: true }
 
 export function useAsyncData(
