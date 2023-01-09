@@ -14,7 +14,6 @@ export const spec = {
   rx: ':', // /[^\w.]+/g,
   order: ['label', 'value', 'index'] as const,
 }
-
 class Item {
   label: unknown
   index: unknown

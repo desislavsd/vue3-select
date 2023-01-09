@@ -7,6 +7,7 @@ import {
   computed,
   watch,
   Ref,
+  UnwrapRef,
 } from 'vue'
 import { MaybeRef } from '@/types'
 import { reactiveComputed } from '@vueuse/core'
@@ -56,9 +57,9 @@ export function useAsyncData(
 }
 
 export function useVModel<
-  T extends { [key: string]: unknown },
+  T extends Record<string, unknown>,
   K extends keyof T & string,
-  V extends T[K]
+  V extends UnwrapRef<T[K]>
 >(
   props: T,
   prop: K,
@@ -66,26 +67,48 @@ export function useVModel<
     defaultValue: undefined as V,
   }
 ) {
+  const busy = useBusy()
+
   const updateKey = computed(() => `onUpdate:${prop?.toString()}`)
 
-  const propValue = computed(() => unref(props[prop]))
+  const propValue = computed(() => unref(props[prop]) as V)
 
   const mustProxy = computed(() => !isset(props[unref(updateKey)]))
 
-  const proxy = ref(unref(propValue) ?? defaultValue)
+  const proxy = ref(unref(propValue) ?? defaultValue) as Ref<V>
 
   watch(propValue, (value) => (proxy.value = value))
 
   const model = computed({
     get() {
-      return unref(mustProxy) ? unref(proxy) : unref(propValue)
+      return unref(mustProxy) ? (unref(proxy) as V) : (unref(propValue) as V)
     },
-    set(value) {
-      unref(mustProxy)
+    async set(value) {
+      if (unref(busy)) return
+
+      await (busy.value = unref(mustProxy)
         ? (proxy.value = value)
-        : props[unref(updateKey)]?.(value)
+        : props[unref(updateKey)]?.(value))
     },
   })
 
-  return model
+  return {
+    proxy: model,
+    busy,
+  }
+}
+
+export function useBusy() {
+  const state = ref<undefined | Promise<unknown>>()
+
+  return computed<boolean>({
+    get() {
+      return Boolean(state.value)
+    },
+    async set(val: any) {
+      await (state.value = val = Promise.allSettled([val]))
+
+      if (state.value == val) state.value = undefined
+    },
+  })
 }

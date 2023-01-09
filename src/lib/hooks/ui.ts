@@ -10,6 +10,15 @@ import {
 } from 'vue'
 import { defineHook, isset } from '../utils'
 
+// TODO
+// or clearOn: select/blur/escape
+// or closeOn: select/blur/escape
+// tagOn: ,/ /Tab/Enter
+// selection mode: append/toggle/skip(hide selected)
+// resolve
+// useQuery
+// virtual scroll
+// pagination
 const definition = defineHook(
   {},
   function (props, ctx, { phrase, src, items, model }) {
@@ -21,7 +30,7 @@ const definition = defineHook(
       valid: false,
     })
 
-    const pointer = usePointer(computed(() => items.done))
+    const pointer = usePointer(computed(() => items.value))
 
     function onFocusin(ev: FocusEvent) {
       flags.active = true
@@ -59,7 +68,6 @@ const definition = defineHook(
       focused?.blur()
     }
 
-    // TODO: append/toggle
     function select(items = [pointer.item].filter(Boolean)) {
       model.isMultiple ? model.append(items) : model.append(items)
 
@@ -94,7 +102,11 @@ const definition = defineHook(
       if (ev.key != 'Escape') open()
       ;(handlers[ev.key as keyof typeof handlers] || handlers.default)?.()
 
-      if (props.tagging & unref(phrase).length && [',', ' '].includes(ev.key)) {
+      if (
+        items.flags.tagging &&
+        unref(phrase).length &&
+        items.flags.tagOn.includes(ev.key)
+      ) {
         ev.preventDefault()
         select()
       }
@@ -150,7 +162,7 @@ const definition = defineHook(
 
 export default definition
 
-function usePointer(items: MaybeRef<SelectService['items']['done']>) {
+function usePointer(items: MaybeRef<SelectService['items']['data']>) {
   const _index = ref(-1)
 
   const index = computed({

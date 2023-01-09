@@ -1,5 +1,10 @@
 import { Config, SelectService } from '@/types'
-import { PropType, SetupContext } from 'vue'
+import {
+  PropType,
+  SetupContext,
+  ExtractPropTypes,
+  ComponentPropsOptions,
+} from 'vue'
 
 export function get(
   path: Parameters<typeof toPath>[0],
@@ -81,10 +86,30 @@ export function defineHook<
   T extends object, // extends Partial<Config>,
   U extends (
     // @ts-ignore
-    defaults: Partial<T>, //keyof T extends never ? Config : Pick<Config, keyof T>,
+    defaults: T, //keyof T extends never ? Config : Pick<Config, keyof T>,
     context: SetupContext,
     service: SelectService
   ) => unknown
 >(defaults: T, hook: U) {
   return { hook, defaults, props: defaultsToProps(defaults) }
+}
+
+function extractDefaults(props: any): any {
+  return Object.fromEntries(
+    Object.entries(props)
+      .map(([name, prop]) => ('default' in prop ? [name, prop.default] : false))
+      .filter(Boolean) as [[]]
+  )
+}
+
+export function defineHook2<
+  T extends ComponentPropsOptions,
+  P extends ExtractPropTypes<T>,
+  U extends (props: P, context: SetupContext, service: SelectService) => unknown
+>(props: T, hook: U): { props: T; hook: U; defaults: P } {
+  return {
+    props,
+    hook,
+    defaults: extractDefaults(props) as P,
+  }
 }

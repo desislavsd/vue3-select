@@ -35,23 +35,28 @@ export default defineComponent({
           <div class="flex flex-wrap gap-1 bg-white p-1 rounded-sm">
             {service.model.value.map((e, i) => (
               <span
-                class="vue3-select__selected grid items-center text-sm px-2 py-1 bg-yellow-500 hover:bg-yellow-600 rounded-sm cursor-pointer"
+                class="vue3-select__selected grid items-center text-sm px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded-sm cursor-pointer"
                 onClick={() => service.model.remove(i)}
               >
                 {e.label}
               </span>
             ))}
             <input
-              class="px-2 h-8 border-none rounded-sm"
+              class="px-2 h-8 border-none rounded-sm flex-1"
               {...attrs}
               {...ui.attrs.input}
             />
+            {service.model.busy && (
+              <i class="flex-shrink-0 block animate-spin h-6 w-6 grid items-center text-center">
+                🛞
+              </i>
+            )}
           </div>
           <ul
             class="bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md"
             style={ui.flags.opened ? '' : { display: 'none' }}
           >
-            {items.done.map((e, i) => (
+            {items.value.map((e, i) => (
               <li
                 class={`h-7 flex items-center m-0 px-2 hover:bg-gray-300 cursor-pointer ${
                   pointer.index == i ? 'bg-gray-200' : ''

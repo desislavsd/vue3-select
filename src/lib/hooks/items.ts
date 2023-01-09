@@ -1,4 +1,10 @@
-import { WithoutFirstParameter, Fn, MaybeRef, SelectService } from '@/types'
+import {
+  WithoutFirstParameter,
+  Fn,
+  MaybeRef,
+  SelectService,
+  MaybeArray,
+} from '@/types'
 import { computed, unref, reactive, ref, watch } from 'vue'
 import { get, toPath, defineHook, isset } from '../utils'
 
@@ -6,7 +12,8 @@ type Props = {
   parse: undefined | string | typeof defaultParse
   filter: undefined | boolean | string | string[] | typeof defaultFilter
   filterBy: undefined | string | string[] | typeof defaultFilter
-  tagging: undefined | boolean
+  tagging: undefined | boolean | MaybeArray<string>
+  tagOn: undefined | MaybeArray<string>
 }
 
 const definition = defineHook(
@@ -15,8 +22,24 @@ const definition = defineHook(
     filter: undefined,
     filterBy: undefined,
     tagging: undefined,
+    tagOn: [',', ' ', 'Enter', 'Tab'],
   } as Props,
   (props, ctx, { src, phrase, item }) => {
+    const tagging = computed(() => isset(unref(props.tagging)))
+
+    const flags = reactive({
+      tagging,
+      tagOn: computed(
+        () =>
+          (
+            [props.tagging, props.tagOn]
+              .map(unref)
+              .map((e) => (typeof e == 'string' ? e.split(/,(?!,)/) : e))
+              .find((e) => Array.isArray(e)) as undefined | string[]
+          )?.filter(Boolean) || []
+      ),
+    })
+
     const parse = computed(() => normalizeParse(props.parse))
 
     const parsed = computed(() =>
@@ -52,19 +75,20 @@ const definition = defineHook(
       return [tag]
     })
 
-    const done = computed(() => unref(tags).concat(unref(filtered)))
+    const value = computed(() => unref(tags).concat(unref(filtered)))
 
     return reactive({
+      flags,
       parsed,
       filtered,
       tags,
-      done,
+      value,
     })
   }
 )
 
 // @ts-ignore
-definition.props.tagging.type = Boolean
+definition.props.tagging.type = [Boolean, String, Array]
 
 export default definition
 

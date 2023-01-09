@@ -1,11 +1,9 @@
 import { Item, MaybeRef, UpdateHandler } from '@/types'
-import { reactive, unref, ref, computed } from 'vue'
+import { reactive, unref, ref, computed, toRefs } from 'vue'
 import { defineHook, isset } from '../utils'
 import { SelectService } from '@/types'
 import { useVModel } from '@/capi'
-// TODO:
-// - add statefull support
-// - local model value should consist of Items, not Items.value
+
 const definition = defineHook(
   {
     multiple: undefined as boolean | undefined,
@@ -17,7 +15,7 @@ const definition = defineHook(
       () => props.multiple === true || Array.isArray(props.modelValue)
     )
 
-    const proxy = useVModel(props, 'modelValue')
+    const { proxy, busy } = useVModel(props, 'modelValue')
 
     const model = computed<Item[]>({
       get(): Item[] {
@@ -92,6 +90,7 @@ const definition = defineHook(
 
     return reactive({
       value: model,
+      busy,
       isMultiple,
       append,
       toggle,

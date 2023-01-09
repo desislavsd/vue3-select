@@ -12,10 +12,10 @@ import { MaybeRef } from '@vueuse/core'
 
 const phrase = defineHook(
   {
-    phrase: '' as MaybeRef<string | undefined>,
+    phrase: '' as MaybeRef<string>,
     'onUpdate:phrase': undefined as undefined | UpdateHandler,
-  },
-  (props) => useVModel(props, 'phrase', { defaultValue: '' })
+  } as const,
+  (props) => useVModel(props, 'phrase', { defaultValue: '' }).proxy
 )
 
 const map = { phrase, item, src, items, model, ui } as const
