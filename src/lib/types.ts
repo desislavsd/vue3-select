@@ -17,6 +17,8 @@ export type Fn<R = unknown> = (...args: any[]) => R
 export type Item = SelectService['items']['parsed'][number]
 
 export type UpdateHandler = (
-  value: unknown,
+  value: any,
   context: { service: SelectService }
 ) => void
+
+export type Not<T, N> = T extends N ? never : T

@@ -1,20 +1,19 @@
 <script lang="tsx">
 import { defineComponent, PropType, InjectionKey, provide } from 'vue'
-import serviceDef from '@/hooks'
+import { useService, props } from '@/service'
 import { SelectService } from '@/types'
 
 const serviceKey = Symbol() as InjectionKey<SelectService>
-
 export default defineComponent({
   name: 'Select',
   props: {
-    ...serviceDef.props,
+    ...props,
     service: {} as PropType<SelectService>,
     class: {},
   },
   inheritAttrs: false,
   setup(props, ctx) {
-    const service = props.service || serviceDef.hook(props, ctx)
+    const service = props.service || useService(props, ctx)
 
     provide(serviceKey, service)
 

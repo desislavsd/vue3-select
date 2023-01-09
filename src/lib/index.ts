@@ -1,4 +1,4 @@
-import Select from './select.vue'
+import Select from '@/components/Select.vue'
 
 declare module 'vue' {
   export interface GlobalComponents {

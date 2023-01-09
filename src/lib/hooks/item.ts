@@ -1,4 +1,5 @@
-import { computed, unref } from 'vue'
+import { Not } from '@/types'
+import { computed, unref, PropType } from 'vue'
 import { getSet, toPath, defineHook } from '../utils'
 
 const ERRORS = {
@@ -6,8 +7,11 @@ const ERRORS = {
     'Trying to set primitive value, but non primitive is expected. Check if `as` configuration matches your model value',
 }
 
-type Props = {
-  as: undefined | string | string[] | typeof getSet[]
+type AsHandler = (target: object, value?: unknown) => unknown
+type AsType = undefined | string | string[] | AsHandler[]
+
+const props = {
+  as: {} as PropType<AsType>,
 }
 
 export const spec = {
@@ -89,12 +93,9 @@ class Item {
   }
 }
 
-function useAs(props: Props) {
+function useAs(as: AsType = []) {
   return computed(() => {
-    let { as = [] } = props
-
     if (typeof as == 'string') as = as.split(spec.rx)
-
     const primitive = !unref(as)?.length
 
     let models = Object.fromEntries(
@@ -103,7 +104,8 @@ function useAs(props: Props) {
         typeof as[i] == 'function'
           ? as[i]
           : as[i]
-          ? getSet.bind(null, toPath(as[i]))
+          ? // @ts-ignore
+            getSet.bind(null, toPath(as[i]))
           : undefined,
       ])
     ) as Record<
@@ -121,20 +123,15 @@ function useAs(props: Props) {
   })
 }
 
-const definition = defineHook(
-  {
-    as: undefined,
-  } as Props,
-  (props) => {
-    const as = useAs(props)
-    return computed(
-      () =>
-        class extends Item {
-          static as: typeof Item['as'] = unref(as)
-        }
-    )
-  }
-)
+const definition = defineHook(props, (props) => {
+  const as = useAs(props.as)
+  return computed(
+    () =>
+      class extends Item {
+        static as: typeof Item['as'] = unref(as)
+      }
+  )
+})
 
 export default definition
 

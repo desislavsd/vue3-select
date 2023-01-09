@@ -1,14 +1,16 @@
 import { Item, MaybeRef, UpdateHandler } from '@/types'
-import { reactive, unref, ref, computed, toRefs } from 'vue'
+import { reactive, unref, ref, computed, toRefs, PropType } from 'vue'
 import { defineHook, isset } from '../utils'
-import { SelectService } from '@/types'
 import { useVModel } from '@/capi'
 
 const definition = defineHook(
   {
-    multiple: undefined as boolean | undefined,
-    modelValue: undefined as MaybeRef<unknown>,
-    'onUpdate:modelValue': undefined as undefined | UpdateHandler,
+    multiple: {
+      type: Boolean,
+      default: undefined,
+    },
+    modelValue: {},
+    'onUpdate:modelValue': [Function] as PropType<UpdateHandler>,
   },
   function (props, context, { items, item }) {
     const isMultiple = computed(

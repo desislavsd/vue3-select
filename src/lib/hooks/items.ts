@@ -5,25 +5,29 @@ import {
   SelectService,
   MaybeArray,
 } from '@/types'
-import { computed, unref, reactive, ref, watch } from 'vue'
+import { computed, unref, reactive, ref, watch, PropType } from 'vue'
 import { get, toPath, defineHook, isset } from '../utils'
-
-type Props = {
-  parse: undefined | string | typeof defaultParse
-  filter: undefined | boolean | string | string[] | typeof defaultFilter
-  filterBy: undefined | string | string[] | typeof defaultFilter
-  tagging: undefined | boolean | MaybeArray<string>
-  tagOn: undefined | MaybeArray<string>
-}
 
 const definition = defineHook(
   {
-    parse: defaultParse,
-    filter: undefined,
-    filterBy: undefined,
-    tagging: undefined,
-    tagOn: [',', ' ', 'Enter', 'Tab'],
-  } as Props,
+    parse: {
+      default: () => defaultParse,
+    },
+    filter: {
+      type: [Boolean, String, Function, Array] as PropType<
+        boolean | string | string[] | typeof defaultFilter
+      >,
+      default: undefined,
+    },
+    filterBy: {} as PropType<string | string[] | typeof defaultFilter>,
+    tagging: [Boolean, String, Array] as PropType<
+      MaybeRef<boolean | MaybeArray<string>>
+    >,
+    tagOn: {
+      type: [String, Array] as PropType<MaybeArray<string>>,
+      default: ',, ,Enter,Tab',
+    },
+  },
   (props, ctx, { src, phrase, item }) => {
     const tagging = computed(() => isset(unref(props.tagging)))
 

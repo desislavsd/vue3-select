@@ -1,12 +1,14 @@
-import { computed, toRefs, watch, unref, reactive } from 'vue'
+import { computed, toRefs, watch, unref, reactive, PropType } from 'vue'
 import { fetch_, defineHook } from '../utils'
 import { useAsyncData } from '../capi'
 import { Fn } from '@/types'
 
 const definition = defineHook(
   {
-    src: undefined as undefined | string | any[] | Fn,
-    fetcher,
+    src: {} as PropType<string | unknown[] | Fn>,
+    fetcher: {
+      default: () => fetcher,
+    },
   },
   function (props, context, { phrase }) {
     const async = computed(() => isSrcAsync(props.src))
@@ -27,7 +29,7 @@ const definition = defineHook(
     // load fn is changed on each src change
     const load = computed(() => {
       const cb = unref(src)
-      return (k: typeof key) => cb(unref(k)[0] || '')
+      return (k: typeof key) => cb(unref(k).at(-1) || '')
     })
 
     // TODO: enabled should depend on more stuff ( focused, valid, not disabled/readonly)
