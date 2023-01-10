@@ -1,10 +1,4 @@
-import {
-  WithoutFirstParameter,
-  Fn,
-  MaybeRef,
-  SelectService,
-  MaybeArray,
-} from '@/types'
+import { WithoutFirstParameter, Fn, MaybeArray } from '@/types'
 import { computed, unref, reactive, ref, watch, PropType } from 'vue'
 import { get, toPath, defineHook, isset } from '../utils'
 
@@ -20,9 +14,7 @@ const definition = defineHook(
       default: undefined,
     },
     filterBy: {} as PropType<string | string[] | typeof defaultFilter>,
-    tagging: [Boolean, String, Array] as PropType<
-      MaybeRef<boolean | MaybeArray<string>>
-    >,
+    tagging: [Boolean, String, Array] as PropType<boolean | MaybeArray<string>>,
     tagOn: {
       type: [String, Array] as PropType<MaybeArray<string>>,
       default: ',, ,Enter,Tab',

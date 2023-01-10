@@ -15,6 +15,7 @@ import { isset } from '@/utils'
 
 const defaults = { enabled: true }
 
+// TODO: do not use reactiveComputed
 export function useAsyncData(
   key: MaybeRef<unknown[]>,
   cb: MaybeRef<(...any: any) => any>,
@@ -58,37 +59,37 @@ export function useAsyncData(
 
 export function useVModel<
   T extends Record<string, unknown>,
-  K extends keyof T & string,
-  V extends UnwrapRef<T[K]>
+  K extends keyof T & string
 >(
   props: T,
   prop: K,
   { defaultValue } = {
-    defaultValue: undefined as V,
+    defaultValue: undefined as T[K],
   }
 ) {
   const busy = useBusy()
 
   const updateKey = computed(() => `onUpdate:${prop?.toString()}`)
 
-  const propValue = computed(() => unref(props[prop]) as V)
+  const propValue = computed(() => props[prop])
 
   const mustProxy = computed(() => !isset(props[unref(updateKey)]))
 
-  const proxy = ref(unref(propValue) ?? defaultValue) as Ref<V>
+  const proxy = ref(unref(propValue) ?? defaultValue) as Ref<T[K]>
 
   watch(propValue, (value) => (proxy.value = value))
 
   const model = computed({
     get() {
-      return unref(mustProxy) ? (unref(proxy) as V) : (unref(propValue) as V)
+      return unref(mustProxy) ? unref(proxy) : unref(propValue)
     },
     async set(value) {
       if (unref(busy)) return
 
       await (busy.value = unref(mustProxy)
         ? (proxy.value = value)
-        : props[unref(updateKey)]?.(value))
+        : // @ts-ignore
+          props[unref(updateKey)]?.call?.(null, value))
     },
   })
 

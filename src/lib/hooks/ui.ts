@@ -7,6 +7,7 @@ import {
   computed,
   InputHTMLAttributes,
   onMounted,
+  toRefs,
 } from 'vue'
 import { defineHook, isset } from '../utils'
 
@@ -20,7 +21,11 @@ import { defineHook, isset } from '../utils'
 // virtual scroll
 // pagination
 const definition = defineHook(
-  {},
+  {
+    placeholder: {
+      default: 'Search...',
+    },
+  },
   function (props, ctx, { phrase, src, items, model }) {
     const el = ref<HTMLElement | null>(null)
 
@@ -135,6 +140,7 @@ const definition = defineHook(
           onClick: () => open(),
         },
         input: {
+          placeholder: toRefs(props).placeholder,
           value: computed(() => unref(phrase)) as any,
           onInput: (ev: InputEvent) => {
             detectValid()

@@ -1,4 +1,4 @@
-import { Item, MaybeRef, UpdateHandler } from '@/types'
+import { Item, UpdateHandler } from '@/types'
 import { reactive, unref, ref, computed, toRefs, PropType } from 'vue'
 import { defineHook, isset } from '../utils'
 import { useVModel } from '@/capi'

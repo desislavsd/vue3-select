@@ -4,6 +4,8 @@ import {
   SetupContext,
   ExtractPropTypes,
   ComponentPropsOptions,
+  isReactive,
+  toRefs,
 } from 'vue'
 
 export function get(
@@ -82,12 +84,22 @@ export function defaultsToProps<T extends object>(defaults: T) {
   }
 }
 
-function extractDefaults(props: any): any {
+export function extractDefaults<T>(
+  props: T,
+  unwrap: boolean = false
+): ExtractPropTypes<T> {
   return Object.fromEntries(
     Object.entries(props)
       .map(([name, prop]) => {
         if (!prop) debugger
-        return 'default' in prop ? [name, prop.default] : false
+        return 'default' in prop
+          ? [
+              name,
+              unwrap && typeof prop.default == 'function'
+                ? prop.default()
+                : prop.default,
+            ]
+          : false
       })
       .filter(Boolean) as [[]]
   )
@@ -107,4 +119,8 @@ export function defineHook<
     hook,
     defaults: extractDefaults(props) as P,
   }
+}
+
+export function toRefsSafe(target: object) {
+  return isReactive(target) ? toRefs(target) : target
 }
