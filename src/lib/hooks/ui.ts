@@ -108,6 +108,7 @@ const definition = defineHook(
       ;(handlers[ev.key as keyof typeof handlers] || handlers.default)?.()
 
       if (
+        ev.key != 'Enter' &&
         items.flags.tagging &&
         unref(phrase).length &&
         items.flags.tagOn.includes(ev.key)

@@ -1,6 +1,8 @@
-import { WithoutFirstParameter, Fn, MaybeArray } from '@/types'
+import { WithoutFirstParameter, Fn, MaybeArray, Not } from '@/types'
 import { computed, unref, reactive, ref, watch, PropType } from 'vue'
 import { get, toPath, defineHook, isset } from '../utils'
+
+type FilterProp = boolean | string | string[] | typeof defaultFilter
 
 const definition = defineHook(
   {
@@ -8,16 +10,14 @@ const definition = defineHook(
       default: () => defaultParse,
     },
     filter: {
-      type: [Boolean, String, Function, Array] as PropType<
-        boolean | string | string[] | typeof defaultFilter
-      >,
+      type: [Boolean, String, Function, Array] as PropType<FilterProp>,
       default: undefined,
     },
-    filterBy: {} as PropType<string | string[] | typeof defaultFilter>,
+    filterBy: {} as PropType<Not<FilterProp, boolean>>,
     tagging: [Boolean, String, Array] as PropType<boolean | MaybeArray<string>>,
     tagOn: {
       type: [String, Array] as PropType<MaybeArray<string>>,
-      default: ',, ,Enter,Tab',
+      default: 'Enter,Tab, ,',
     },
   },
   (props, ctx, { src, phrase, item }) => {
@@ -30,7 +30,9 @@ const definition = defineHook(
           (
             [props.tagging, props.tagOn]
               .map(unref)
-              .map((e) => (typeof e == 'string' ? e.split(/,(?!,)/) : e))
+              .map((e) =>
+                typeof e == 'string' ? e.split(/,/).map((e) => e || ',') : e
+              )
               .find((e) => Array.isArray(e)) as undefined | string[]
           )?.filter(Boolean) || []
       ),
@@ -49,7 +51,7 @@ const definition = defineHook(
           // dynamic items are filtered serverside
           return false
 
-      return normalizeFilter(props)
+      return normalizeFilter(props.filter)
     })
 
     const filtered = computed(() => {
@@ -105,7 +107,7 @@ function defaultParse(res: any): unknown[] {
   )
 }
 
-function normalizeFilter(filter: string | string[]) {
+function normalizeFilter(filter?: FilterProp) {
   if (typeof filter == 'function') return filter
 
   if (typeof filter == 'string') filter = filter.split(/[^\w.*]+/g)
@@ -124,17 +126,38 @@ function filterByProps(props: string[], item: any, phrase: string) {
 
   return props
     .map(toPath)
-    .map((path: string[]) =>
-      path.at(-1) == '*'
-        ? Object.keys(get(path.slice(0, -1), item)).map((key) =>
-            path.concat(key)
-          )
-        : path
-    )
+    .map((path: string[]) => {
+      const prefix = path.slice(0, -1)
+      const sufix = path.at(-1) || ''
+
+      if (['*', '**'].includes(sufix))
+        return craw(get(prefix, item), sufix == '**').map((e) =>
+          prefix.concat(e)
+        )
+
+      const target = get(path, item)
+
+      if (typeof target == 'object')
+        return craw(target).map((e) => path.concat(e))
+
+      return [path]
+    })
     .flat()
-    .some((prop) => get(prop, item)?.toString().toLowerCase().includes(phrase))
+    .some((path) => get(path, item)?.toString().toLowerCase().includes(phrase))
 }
 
 function defaultFilter(...args: WithoutFirstParameter<typeof filterByProps>) {
   return filterByProps(['label'], ...args)
+}
+
+function craw(item: object, recursive: boolean = false): string[][] {
+  return Object.entries(item)
+    .map(([path, val]) =>
+      typeof val != 'object'
+        ? [[path]]
+        : recursive
+        ? craw(val, recursive).map((e) => [path, ...e])
+        : []
+    )
+    .flat()
 }

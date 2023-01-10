@@ -17,7 +17,7 @@ export default defineComponent({
 
     provide(serviceKey, service)
 
-    const { attrs } = ctx
+    const { attrs, slots } = ctx
 
     return () => {
       const { items, ui } = service
@@ -62,7 +62,7 @@ export default defineComponent({
                 }`}
                 {...ui.attrs.option(e)}
               >
-                {e.label}
+                {slots.item?.({ item: e, index: i }) || e.label}
               </li>
             ))}
           </ul>
