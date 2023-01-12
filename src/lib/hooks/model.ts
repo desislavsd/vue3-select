@@ -1,5 +1,13 @@
 import { Item, UpdateHandler } from '@/types'
-import { reactive, unref, ref, computed, toRefs, PropType } from 'vue'
+import {
+  reactive,
+  unref,
+  ref,
+  computed,
+  toRefs,
+  PropType,
+  watchEffect,
+} from 'vue'
 import { defineHook, isset } from '../utils'
 import { useVModel } from '@/capi'
 
@@ -19,27 +27,28 @@ const definition = defineHook(
 
     const { proxy, busy } = useVModel(props, 'modelValue')
 
+    // no need for this to be reactive
+    // its onl
+    let oldValue: Item[] = []
+
+    const index = computed(() => items.parsed.concat(unref(oldValue)))
+
     const model = computed<Item[]>({
       get(): Item[] {
         const v = proxy.value
         // model value is normalized to array for unified internal usage
-        return [v]
-          .flat()
-          .filter(isset)
-          .map(
-            (v) =>
-              items.parsed.find((e) => e.equals(v)) || unref(item).ofValue(v)
-          )
+        return [v].flat().filter(isset).map(resolve)
       },
       set(v?: Item | Item[]) {
-        const newValue = [v]
-          .flat()
-          .filter(isset)
-          .map((e) => e.value)
+        const newValue = ([v].flat().filter(isset) as Item[]).map(
+          (e) => e.value
+        )
 
         proxy.value = unref(isMultiple) ? newValue : newValue[0]
       },
     })
+
+    watchEffect(() => (oldValue = model.value))
 
     // appends selected option to model value
     // no matters if it was already selected
@@ -50,6 +59,11 @@ const definition = defineHook(
       if (!unref(isMultiple)) return (model.value = item)
 
       model.value = model.value.concat(item)
+    }
+
+    function resolve(value: unknown) {
+      const newItem = unref(item).ofValue(value)
+      return unref(index).find((e) => e.equals(newItem)) || newItem
     }
 
     // remove/appends option to model value
