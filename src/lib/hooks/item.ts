@@ -1,5 +1,5 @@
-import { Not } from '@/types'
-import { computed, unref, PropType } from 'vue'
+import { MaybeRef, Not } from '@/types'
+import { computed, unref, PropType, toRef } from 'vue'
 import { getSet, toPath, defineHook } from '../utils'
 
 const ERRORS = {
@@ -93,9 +93,12 @@ class Item {
   }
 }
 
-function useAs(as: AsType = []) {
+function useAs(asProp: MaybeRef<AsType> = []) {
   return computed(() => {
+    let as = unref(asProp)
+
     if (typeof as == 'string') as = as.split(spec.rx)
+
     const primitive = !unref(as)?.length
 
     let models = Object.fromEntries(
@@ -124,7 +127,7 @@ function useAs(as: AsType = []) {
 }
 
 const definition = defineHook(props, (props) => {
-  const as = useAs(props.as)
+  const as = useAs(toRef(props, 'as'))
   return computed(
     () =>
       class extends Item {
