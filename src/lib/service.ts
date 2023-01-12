@@ -55,24 +55,36 @@ export function defineConfig<T extends Partial<Config>>(config: T): T {
 }
 
 function buildService(props: Config, context: Partial<SetupContext>) {
+  const service = {
+    props,
+    context,
+    defaults,
+  } as SelectService
+
+  service.service = service
+
   return Object.entries(map).reduce(
-    (m, [name, def]) => ({
-      ...m,
-      [name]: def.hook(props, context, m as SelectService),
-    }),
-    {}
-  ) as unknown as SelectService
+    (m, [name, def]) =>
+      Object.assign(m, {
+        [name]: def.hook(props, context, m as SelectService),
+      }),
+    service
+  )
 }
 
 declare module '@/types' {
   export type Config = typeof defaults
   // export type Config = ExtractPropTypes<typeof props>
   export interface SelectService {
+    props: Config
+    context: Partial<SetupContext>
+    defaults: Config
     phrase: ReturnType<typeof phrase['hook']>
     item: ReturnType<typeof item['hook']>
     src: ReturnType<typeof src['hook']>
     items: ReturnType<typeof items['hook']>
     model: ReturnType<typeof model['hook']>
     ui: ReturnType<typeof ui['hook']>
+    service: SelectService
   }
 }
