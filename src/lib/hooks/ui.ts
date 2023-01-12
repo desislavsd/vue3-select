@@ -7,9 +7,9 @@ import {
   computed,
   InputHTMLAttributes,
   onMounted,
-  toRefs,
+  toRef,
 } from 'vue'
-import { defineHook, isset } from '../utils'
+import { debounce, defineHook, isset } from '../utils'
 
 // TODO
 // or clearOn: select/blur/escape
@@ -24,6 +24,13 @@ const definition = defineHook(
   {
     placeholder: {
       default: 'Search...',
+    },
+    debounce: {
+      type: [Boolean, Number],
+      default: undefined,
+    },
+    defaultDebounce: {
+      default: 250,
     },
   },
   function (props, ctx, { phrase, src, items, model }) {
@@ -47,6 +54,7 @@ const definition = defineHook(
     function onFocusout(ev: FocusEvent & { relatedTarget: HTMLElement }) {
       // do nothing if focus is still within the the root element
       if (el.value?.matches(':focus-within')) return
+      phrase.value = ''
       flags.active = false
       close()
     }
@@ -60,7 +68,6 @@ const definition = defineHook(
       if (!flags.opened) return
       flags.opened = false
       pointer.index = -1
-      phrase.value = ''
     }
 
     function focus() {
@@ -84,6 +91,7 @@ const definition = defineHook(
       const handlers = {
         Escape() {
           if (!flags.opened) return blur()
+          if (~pointer.index) return (pointer.index = -1)
           close()
         },
         Enter() {
@@ -126,6 +134,11 @@ const definition = defineHook(
 
     onMounted(detectValid)
 
+    function onInput(ev: InputEvent) {
+      // if (!detectValid()) return
+      phrase.value = (ev.target as InputHTMLAttributes)?.value?.trim()
+    }
+
     return reactive({
       flags,
       pointer,
@@ -141,12 +154,22 @@ const definition = defineHook(
           onClick: () => open(),
         },
         input: {
-          placeholder: toRefs(props).placeholder,
-          value: computed(() => unref(phrase)) as any,
-          onInput: (ev: InputEvent) => {
-            detectValid()
-            phrase.value = (ev.target as InputHTMLAttributes)?.value?.trim()
-          },
+          placeholder: toRef(props, 'placeholder'),
+          value: phrase,
+          // TODO: Google like typeahead
+          /* computed(
+            () => (flags.opened && pointer.item?.label) || unref(phrase)
+          ) as any, */
+          onInput: computed(() =>
+            src.async || props.debounce
+              ? debounce(
+                  typeof props.debounce == 'number'
+                    ? props.debounce
+                    : props.defaultDebounce,
+                  onInput
+                )
+              : onInput
+          ),
         },
         option(option: Item) {
           return {
@@ -169,7 +192,7 @@ const definition = defineHook(
 
 export default definition
 
-function usePointer(items: MaybeRef<SelectService['items']['data']>) {
+function usePointer(items: MaybeRef<Item[]>) {
   const _index = ref(-1)
 
   const index = computed({
@@ -197,7 +220,7 @@ function usePointer(items: MaybeRef<SelectService['items']['data']>) {
     index.value = prev
   }
 
-  watch(items, () => (index.value = 0))
+  watch(items, () => (index.value = -1))
 
   return reactive({
     index,
