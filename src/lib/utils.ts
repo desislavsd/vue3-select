@@ -55,10 +55,20 @@ export function isPrimitive(x: any) {
   return x !== Object(x)
 }
 
-export function debounce(t: number, f: (...args: any) => any, defaults: any) {
-  var timeout: any
+const AsyncFunction = (async () => {}).constructor
 
-  function handler(...args: any) {
+export function isAsync(fn: (...args: any[]) => any) {
+  return fn instanceof AsyncFunction
+}
+
+export function debounce<F extends (...args: any) => any>(
+  t: number,
+  f: F,
+  defaults?: unknown
+) {
+  var timeout: NodeJS.Timeout
+
+  function handler(this: unknown, ...args: any) {
     clearTimeout(timeout)
 
     timeout = setTimeout(() => f.apply(this, args), t)
@@ -66,7 +76,7 @@ export function debounce(t: number, f: (...args: any) => any, defaults: any) {
     return defaults
   }
 
-  return t ? handler : f
+  return t ? (handler as F) : f
 }
 
 export function me() {
