@@ -19,6 +19,8 @@ export default defineComponent({
 
     const { attrs, slots } = ctx
 
+    ctx.expose({ service })
+
     return () => {
       const { items, ui } = service
       const { pointer } = ui
@@ -34,25 +36,27 @@ export default defineComponent({
           <div class="flex flex-wrap gap-1 bg-white p-1 rounded-sm">
             {service.model.value.map((e, i) => (
               <span
-                class="vue3-select__selected grid items-center text-sm px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded-sm cursor-pointer"
+                class="vue3-select__selected flex items-center text-sm px-2 py-1 bg-gray-300 hover:bg-gray-200 rounded-sm cursor-pointer"
                 onClick={() => service.model.remove(i)}
               >
-                {e.label}
+                {slots.both?.({ item: e, index: i }) || e.label}
               </span>
             ))}
-            <input
-              class="px-2 h-8 border-none rounded-sm flex-1"
-              {...attrs}
-              {...ui.attrs.input}
-            />
-            {service.model.busy && (
+            <div class="relative flex-1">
+              <input
+                class="px-2 h-8 border-none rounded-sm flex-1 w-full"
+                {...attrs}
+                {...ui.attrs.input}
+              />
+            </div>
+            {(service.model.busy || service.src.busy) && (
               <i class="flex-shrink-0 block animate-spin h-6 w-6 grid items-center text-center">
                 🛞
               </i>
             )}
           </div>
           <ul
-            class="bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md"
+            class="bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md overflow-auto max-h-md"
             style={ui.flags.opened ? '' : { display: 'none' }}
           >
             {items.value.map((e, i) => (
@@ -62,7 +66,12 @@ export default defineComponent({
                 }`}
                 {...ui.attrs.option(e)}
               >
-                {slots.item?.({ item: e, index: i }) || e.label}
+                {slots.item?.({ item: e, index: i }) ||
+                  slots.both?.({ item: e, index: i }) ||
+                  e.label}
+                {e.new && (
+                  <span class="text-xs opacity-30 ml-auto italic">create</span>
+                )}
               </li>
             ))}
           </ul>
