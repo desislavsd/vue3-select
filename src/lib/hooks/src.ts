@@ -47,21 +47,18 @@ function useSrc(
 ) {
   const { props } = this
 
-  const config = toRef(props, 'src')
+  const async = computed(() => isSrcAsync(props.src))
 
-  const async = computed(() => isSrcAsync(unref(config)))
-
-  const dynamic = computed(() => isSrcDynamic(unref(config)))
-
-  const getter = computed(() => props.fetcher.bind(this, unref(config)))
+  const dynamic = computed(() => isSrcDynamic(props.src))
 
   const key = computed(() => (unref(dynamic) ? [params] : []))
 
-  // changed on each getter change
   const fetcher = computed(() => {
-    // make sure this computed knows it depends on getter()
-    const cb = unref(getter)
-    return (k: typeof key) => cb(unref(k).at(-1) || { phrase: '' })
+    // make sure this computed knows it depends on fetcher & src
+    const { fetcher, src } = props
+
+    return (k: typeof key) =>
+      fetcher.call(this, unref(k).at(-1) || { phrase: '' })
   })
 
   return reactive({
@@ -75,7 +72,7 @@ function useSrc(
 // i.e. returns true for paginated results
 function isSrcDynamic(src: any) {
   if (!isSrcAsync(src)) return false
-  if (src?.includes?.('%s')) return true
+  if (typeof src == 'string' && /%s|{\w+?}/.test(src)) return true
   return typeof src == 'function' && src.length > 0
 }
 
@@ -86,23 +83,20 @@ function isSrcAsync(src: unknown) {
   return !!src && !Array.isArray(src)
 }
 
-function fetcher(
-  this: SelectService,
-  config: unknown,
-  params: { phrase: string }
-) {
+function fetcher(this: SelectService, params: { phrase: string }) {
+  const config = this.props.src
+
   if (typeof config === 'function') return config(params)
 
   if (typeof config === 'string')
     return this.props.fetch(
-      config.replace(
-        '%s',
-        encodeURIComponent(params.phrase).replace(/{(\w+)}/g, (m, prop) =>
-          prop in params
+      config
+        .replace('%s', encodeURIComponent(params.phrase))
+        .replace(/{(\w+?)}/g, (m, prop) => {
+          return prop in params
             ? encodeURIComponent(params[prop as keyof typeof params].toString())
             : ''
-        )
-      )
+        })
     )
 
   return config || []
