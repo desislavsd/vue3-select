@@ -1,4 +1,4 @@
-import { Config, SelectService } from '@/types'
+import { Config, Fn, SelectService } from '@/types'
 import {
   PropType,
   SetupContext,
@@ -39,7 +39,7 @@ export function toPath(path: string | string[]) {
   return typeof path == 'string' ? path.split('.').filter(Boolean) : path || []
 }
 
-export async function fetch_<T = any>(url: string): Promise<T> {
+export async function fetch_<T = unknown>(url: string): Promise<T> {
   const res = await fetch(url)
 
   if (!res.ok) throw res
@@ -133,4 +133,16 @@ export function defineHook<
 
 export function toRefsSafe(target: object) {
   return isReactive(target) ? toRefs(target) : target
+}
+
+export function mapObj<
+  TObj extends object,
+  TKeys extends keyof TObj,
+  TMap extends (name: TKeys, value: TObj[TKeys]) => any
+>(obj: TObj, fn: TMap): Record<TKeys, ReturnType<TMap>> {
+  const entries = Object.entries(obj) as [TKeys, TObj[TKeys]][]
+
+  return Object.fromEntries(
+    entries.map(([name, value]) => [name, fn(name, value)] as const)
+  ) as any
 }

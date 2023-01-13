@@ -21,7 +21,7 @@ const definition = defineHook(
     },
   },
   (props, ctx, { src, phrase, item }) => {
-    const tagging = computed(() => isset(unref(props.tagging)))
+    const tagging = computed(() => !!unref(props.tagging))
 
     const flags = reactive({
       tagging,
@@ -64,7 +64,7 @@ const definition = defineHook(
 
     const tags = computed(() => {
       // TODO: add check if tagging is enabled
-      if (!props.tagging || !src.fetched || !unref(phrase)) return []
+      if (!props.tagging || !src.data || !unref(phrase)) return []
 
       const tag = unref(item).ofPhrase(unref(phrase))
 

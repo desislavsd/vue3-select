@@ -11,22 +11,20 @@ import {
 } from 'vue'
 import { MaybeRef } from '@/types'
 import { reactiveComputed } from '@vueuse/core'
-import { isset } from '@/utils'
+import { isset, mapObj } from '@/utils'
 
 const defaults = { enabled: true }
 
 // TODO: do not use reactiveComputed
 export function useAsyncData(
   key: MaybeRef<unknown[]>,
-  cb: MaybeRef<(...any: any) => any>,
+  fetcher: MaybeRef<(...any: any) => any>,
   opts: MaybeRef<typeof defaults>
 ) {
   const defaults = {
-    data: null,
-    error: null,
+    data: null as unknown,
+    error: null as unknown,
     busy: false,
-    fetched: false,
-    stale: true,
     id: '',
   }
 
@@ -41,26 +39,28 @@ export function useAsyncData(
     }
     const localState = state.value
 
-    Promise.resolve(unref(cb)(unref(key)))
-      .then((data) => Object.assign(localState, { data, stale: false }))
+    Promise.resolve(unref(fetcher)(unref(key)))
+      .then((data) => Object.assign(localState, { data }))
       .catch((error) => (localState.error = error))
-      .finally(() => Object.assign(localState, { fetched: true, busy: false }))
+      .finally(() => Object.assign(localState, { busy: false }))
   }
 
-  watch([cb, key, opts], refresh, {
+  watch([fetcher, key, opts], refresh, {
     immediate: true,
     deep: true,
   })
 
-  const expo = reactiveComputed(() => ({ ...state.value, refresh }))
-
-  return expo
+  return reactive({
+    ...(mapObj(defaults, (name) =>
+      computed(() => unref(state)[name])
+    ) as unknown as typeof defaults),
+    refresh,
+  })
 }
 
-export function useVModel<
-  T extends Record<string, unknown>,
-  K extends keyof T & string
->(
+type oo = {} extends object ? true : false
+
+export function useVModel<T extends object, K extends keyof T & string>(
   props: T,
   prop: K,
   { defaultValue } = {
@@ -69,7 +69,7 @@ export function useVModel<
 ) {
   const busy = useBusy()
 
-  const updateKey = computed(() => `onUpdate:${prop?.toString()}`)
+  const updateKey = computed(() => `onUpdate:${prop?.toString()}` as keyof T)
 
   const propValue = computed(() => props[prop])
 
@@ -83,19 +83,26 @@ export function useVModel<
     get() {
       return unref(mustProxy) ? unref(proxy) : unref(propValue)
     },
-    async set(value) {
-      if (unref(busy)) return
-
-      await (busy.value = unref(mustProxy)
-        ? (proxy.value = value)
-        : // @ts-ignore
-          props[unref(updateKey)]?.call?.(null, value))
-    },
+    set,
   })
+
+  async function set(value: T[K], ...args: unknown[]) {
+    if (unref(busy)) return
+
+    const promise = unref(mustProxy)
+      ? (proxy.value = value)
+      : // @ts-ignore
+        props[unref(updateKey)]?.call?.(this, value, ...args)
+
+    busy.value = promise
+
+    return await promise
+  }
 
   return {
     proxy: model,
     busy,
+    set,
   }
 }
 

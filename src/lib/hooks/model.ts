@@ -1,4 +1,4 @@
-import { Item, UpdateHandler } from '@/types'
+import { Item, MaybeArray, UpdateHandler } from '@/types'
 import {
   reactive,
   unref,
@@ -20,12 +20,12 @@ const definition = defineHook(
     modelValue: {},
     'onUpdate:modelValue': [Function] as PropType<UpdateHandler>,
   },
-  function (props, context, { items, item }) {
+  function (props, context, { items, item, service }) {
     const isMultiple = computed(
       () => props.multiple === true || Array.isArray(props.modelValue)
     )
 
-    const { proxy, busy } = useVModel(props, 'modelValue')
+    const { proxy, busy, set: proxySet } = useVModel(props, 'modelValue')
 
     // no need for this to be reactive
     // its onl
@@ -40,11 +40,13 @@ const definition = defineHook(
         return [v].flat().filter(isset).map(resolve)
       },
       set(v?: Item | Item[]) {
-        const newValue = ([v].flat().filter(isset) as Item[]).map(
-          (e) => e.value
-        )
+        let value: MaybeArray<Item> = [v].flat().filter(isset) as Item[]
 
-        proxy.value = unref(isMultiple) ? newValue : newValue[0]
+        let rawValue: MaybeArray<unknown> = value.map((e) => e.value)
+
+        if (!unref(isMultiple)) rawValue = (value = value[0])?.value
+
+        proxySet.call(service, rawValue, { value, service })
       },
     })
 
