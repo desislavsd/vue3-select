@@ -31,7 +31,7 @@ const definition = defineHook(
       enabled: true,
     })
     const params = reactive({
-      phrase: computed(() => unref(phrase).trim()),
+      phrase,
     })
 
     return props.useSrc.call(service, opts, params)

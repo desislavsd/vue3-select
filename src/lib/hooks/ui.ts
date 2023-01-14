@@ -9,6 +9,7 @@ import {
   onMounted,
   toRef,
   getCurrentInstance,
+  watchEffect,
 } from 'vue'
 import { debounce, defineHook } from '@/utils'
 
@@ -60,9 +61,16 @@ const definition = defineHook(
 
     const pointer = usePointer(computed(() => items.value))
 
+    /**
+     * Local version of `phrase` with debounce support;
+     */
+    const inputValue = useInputValue()
+
+    onMounted(detectValid)
+
     function onFocusin(ev: FocusEvent) {
       flags.active = true
-      open()
+      // open()
       focus()
       !src.data && !src.busy && src.refresh()
     }
@@ -162,11 +170,43 @@ const definition = defineHook(
         ?.matches(':valid'))
     }
 
-    onMounted(detectValid)
+    /**
+     * Creates local version of `phrase` with debounce supp since
+     * binding phrase directly to input in combination with
+     * debounced updates results in wrong phrase update
+     * when component rerenders becuse of something else (i.e async search results)
+     */
+    function useInputValue() {
+      const phrase_ = ref('')
 
-    function onInput(ev: InputEvent) {
-      // if (!detectValid()) return
-      phrase.value = (ev.target as InputHTMLAttributes)?.value || ''
+      watchEffect(() => (phrase_.value = phrase.value))
+
+      watch(
+        phrase_,
+        unref(
+          computed(() => {
+            const f = () => (phrase.value = phrase_.value.trim())
+            if (!src.async && !props.debounce) return f
+            const t =
+              typeof props.debounce == 'number'
+                ? props.debounce
+                : props.defaultDebounce
+            return debounce(t, f)
+          })
+        )
+      )
+
+      return computed({
+        get() {
+          if (!props.typeahead) return unref(phrase_)
+
+          return ((flags.opened && !pointer.item?.new && pointer.item?.label) ||
+            unref(phrase_)) as string
+        },
+        set(v: string) {
+          phrase_.value = v
+        },
+      })
     }
 
     return reactive({
@@ -186,23 +226,9 @@ const definition = defineHook(
         },
         input: {
           placeholder: toRef(props, 'placeholder'),
-          value: phrase,
-          // TODO: Google like typeahead
-          // value: computed(
-          //   () =>
-          //     (flags.opened && !pointer.item?.new && pointer.item?.label) ||
-          //     unref(phrase)
-          // ) as any,
-          onInput: computed(() =>
-            src.async || props.debounce
-              ? debounce(
-                  typeof props.debounce == 'number'
-                    ? props.debounce
-                    : props.defaultDebounce,
-                  onInput
-                )
-              : onInput
-          ),
+          value: inputValue,
+          onInput: (ev: { target: HTMLInputElement }) =>
+            (inputValue.value = ev.target.value),
         },
         option(option: Item) {
           return {
