@@ -1,28 +1,134 @@
-import { MaybeRef, Item } from '@/types'
+import {
+  MaybeRef,
+  Item,
+  WithoutFirstParameter,
+  MaybeArray,
+  Not,
+  SelectService,
+  Fn,
+} from '@/types'
 import {
   reactive,
   unref,
   ref,
   watch,
   computed,
-  InputHTMLAttributes,
   onMounted,
   toRef,
   getCurrentInstance,
   watchEffect,
+  PropType,
 } from 'vue'
-import { debounce, defineHook } from '@/utils'
+import { debounce, defineHook, toPath, get, craw } from '@/utils'
 
-// TODO
+type FilterProp = boolean | string | string[] | typeof defaultFilter
+
+const uiItemsHook = defineHook(
+  {
+    filter: {
+      type: [Boolean, String, Function, Array] as PropType<FilterProp>,
+      default: undefined,
+    },
+    filterBy: {} as PropType<Not<FilterProp, boolean>>,
+    tagging: [Boolean, String, Array] as PropType<boolean | MaybeArray<string>>,
+    tagOn: {
+      type: [String, Array] as PropType<MaybeArray<string>>,
+      default: 'Enter,Tab, ,',
+    },
+    mode: {
+      type: String as PropType<'skip' | 'append' | 'toggle'>,
+      default: 'skip',
+    },
+    /**
+     * Function that returns true for options that should be disabled
+     */
+    // disable: {
+    //   type: Function as PropType<(this: SelectService, item: Item) => boolean>,
+    // },
+  },
+  (props, ctx, { phrase, items, src, model, item }) => {
+    const tagging = computed(() => !!unref(props.tagging))
+
+    const flags = reactive({
+      tagging,
+      tagOn: computed(
+        () =>
+          (
+            [props.tagging, props.tagOn]
+              .map(unref)
+              .map((e) =>
+                typeof e == 'string' ? e.split(/,/).map((e) => e || ',') : e
+              )
+              .find((e) => Array.isArray(e)) as undefined | string[]
+          )?.filter(Boolean) || []
+      ),
+      mode: toRef(props, 'mode'),
+    })
+
+    const filter = computed(() => {
+      if (!props.filter)
+        if (src.dynamic)
+          // auto decide if filter should be applied
+          // dynamic items are filtered serverside
+          return false
+
+      return normalizeFilter(props.filter)
+    })
+
+    const moded = computed(() => {
+      return flags.mode == 'skip'
+        ? unref(items).filter((e) => !model.value.some((s) => s.equals(e)))
+        : unref(items)
+    })
+
+    const filtered = computed(() => {
+      if (!unref(phrase) || !unref(filter)) return unref(moded)
+
+      return unref(moded).filter((item) =>
+        (unref(filter) as Fn<boolean>)(item, unref(phrase))
+      )
+    })
+
+    const tags = computed(() => {
+      // TODO: add check if tagging is enabled
+      if (!props.tagging || !src.data || !unref(phrase)) return []
+
+      const tag = unref(item).ofPhrase(unref(phrase))
+
+      if (unref(filtered).some((e) => e.matches(tag))) return []
+
+      return [tag]
+    })
+
+    const value = computed(() => unref(tags).concat(unref(filtered)))
+
+    const pointer = usePointer(value)
+
+    function select(items = [pointer.item].filter(Boolean)) {
+      if (!items.length) return
+
+      model.isMultiple
+        ? props.mode == 'append'
+          ? model.append(items)
+          : model.toggle(items)
+        : model.append(items)
+    }
+
+    return reactive({
+      value,
+      flags,
+      pointer,
+      select,
+    })
+  }
+)
+// TODO:
 // or clearOn: select/blur/escape
 // or closeOn: select/blur/escape
-// tagOn: ,/ /Tab/Enter
-// selection mode: append/toggle/skip(hide selected)
 // resolve
 // useQuery
 // virtual scroll
 // pagination
-// typeahead styles: google / arc / placeholder like
 const definition = defineHook(
   {
     id: {
@@ -45,8 +151,9 @@ const definition = defineHook(
       type: [Boolean],
       default: undefined,
     },
+    ...uiItemsHook.props,
   },
-  function (props, ctx, { phrase, src, items, model }) {
+  function (props, ctx, { phrase, src, model, service }) {
     const vm = getCurrentInstance()
     const id = computed(
       () => props.id || `v3s-${vm?.uid || Math.random().toString(32).slice(2)}`
@@ -59,7 +166,9 @@ const definition = defineHook(
       valid: false,
     })
 
-    const pointer = usePointer(computed(() => items.value))
+    const items = uiItemsHook.hook(props, ctx, service)
+
+    const { pointer } = items
 
     /**
      * Local version of `phrase` with debounce support;
@@ -83,6 +192,12 @@ const definition = defineHook(
       close()
     }
 
+    function select(...args: Item[][]) {
+      items.select(...args)
+      model.isMultiple || close()
+      phrase.value = ''
+    }
+
     function open() {
       if (flags.opened) return
       flags.opened = true
@@ -102,15 +217,6 @@ const definition = defineHook(
       const focused: HTMLElement | null =
         el.value?.querySelector(':focus') || el.value
       focused?.blur()
-    }
-
-    function select(items = [pointer.item].filter(Boolean)) {
-      if (!items.length) return
-
-      model.isMultiple ? model.append(items) : model.append(items)
-
-      model.isMultiple || close()
-      phrase.value = ''
     }
 
     function onKeydown(ev: KeyboardEvent) {
@@ -212,6 +318,7 @@ const definition = defineHook(
     return reactive({
       flags,
       pointer,
+      items: toRef(items, 'value'),
       attrs: {
         root: {
           id,
@@ -286,4 +393,47 @@ function usePointer(items: MaybeRef<Item[]>) {
     item,
     next,
   })
+}
+
+function normalizeFilter(filter?: FilterProp) {
+  if (typeof filter == 'function') return filter
+
+  if (typeof filter == 'string') filter = filter.split(/[^\w.*]+/g)
+
+  if (Array.isArray(filter))
+    return filterByProps.bind(
+      null,
+      filter.filter(Boolean).map((path) => `raw.${path}`)
+    )
+
+  return filterByProps.bind(null, ['label'])
+}
+
+function filterByProps(props: string[], item: any, phrase: string) {
+  phrase = phrase.toLowerCase()
+
+  return props
+    .map(toPath)
+    .map((path: string[]) => {
+      const prefix = path.slice(0, -1)
+      const sufix = path.at(-1) || ''
+
+      if (['*', '**'].includes(sufix))
+        return craw(get(prefix, item), sufix == '**').map((e) =>
+          prefix.concat(e)
+        )
+
+      const target = get(path, item)
+
+      if (typeof target == 'object')
+        return craw(target).map((e) => path.concat(e))
+
+      return [path]
+    })
+    .flat()
+    .some((path) => get(path, item)?.toString().toLowerCase().includes(phrase))
+}
+
+function defaultFilter(...args: WithoutFirstParameter<typeof filterByProps>) {
+  return filterByProps(['label'], ...args)
 }

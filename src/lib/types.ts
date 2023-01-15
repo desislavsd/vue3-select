@@ -14,7 +14,7 @@ export type WithoutFirstParameter<F extends Fn> = WithoutFirst<Parameters<F>>
 
 export type Fn<R = unknown> = (...args: any[]) => R
 
-export type Item = SelectService['items']['parsed'][number]
+export type Item = SelectService['items']['value'][number]
 
 export type UpdateHandler = (
   value: any,

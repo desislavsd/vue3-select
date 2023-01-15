@@ -1,13 +1,5 @@
 import { Item, MaybeArray, UpdateHandler } from '@/types'
-import {
-  reactive,
-  unref,
-  ref,
-  computed,
-  toRefs,
-  PropType,
-  watchEffect,
-} from 'vue'
+import { reactive, unref, computed, PropType, watchEffect } from 'vue'
 import { defineHook, isset } from '../utils'
 import { useVModel } from '@/capi'
 
@@ -31,12 +23,12 @@ const definition = defineHook(
     // its onl
     let oldValue: Item[] = []
 
-    const index = computed(() => items.parsed.concat(unref(oldValue)))
+    const index = computed(() => unref(items).concat(unref(oldValue)))
 
+    // model value is normalized to array for unified internal usage
     const model = computed<Item[]>({
       get(): Item[] {
         const v = proxy.value
-        // model value is normalized to array for unified internal usage
         return [v].flat().filter(isset).map(resolve)
       },
       set(v?: Item | Item[]) {

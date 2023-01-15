@@ -146,3 +146,18 @@ export function mapObj<
     entries.map(([name, value]) => [name, fn(name, value)] as const)
   ) as any
 }
+
+/**
+ * Get array of paths to all non object values of an object;
+ */
+export function craw(object: object, recursive: boolean = false): string[][] {
+  return Object.entries(object)
+    .map(([path, val]) =>
+      typeof val != 'object'
+        ? [[path]]
+        : recursive
+        ? craw(val, recursive).map((e) => [path, ...e])
+        : []
+    )
+    .flat()
+}

@@ -81,7 +81,7 @@ class Item {
 
   // TODO: support non primitive comparisons
   equals(item: any) {
-    if (!(item instanceof Item)) item = this.constructor.ofValue(item)
+    if (!(item instanceof Item)) item = this.constructor.ofValue?.(item) || item
     return this.index == item.index
   }
 
@@ -113,7 +113,7 @@ function useAs(asProp: MaybeRef<AsType> = []) {
       ])
     ) as Record<
       typeof spec.order[number],
-      (target: Record<any, any>, value?: any) => any
+      undefined | ((target: Record<any, any>, value?: any) => any)
     >
 
     const poor = primitive ? false : !!models.value

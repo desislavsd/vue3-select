@@ -22,8 +22,8 @@ export default defineComponent({
     ctx.expose({ service })
 
     return () => {
-      const { items, ui } = service
-      const { pointer } = ui
+      const { ui } = service
+      const { pointer, items } = ui
 
       return (
         <div
@@ -59,7 +59,7 @@ export default defineComponent({
             class="bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md overflow-auto max-h-md"
             style={ui.flags.opened ? '' : { display: 'none' }}
           >
-            {items.value.map((e, i) => (
+            {items.map((e, i) => (
               <li
                 class={`h-7 flex items-center m-0 px-2 hover:bg-gray-300 cursor-pointer ${
                   pointer.index == i ? 'bg-gray-200' : ''
