@@ -1,6 +1,6 @@
-import { computed, toRefs, watch, unref, reactive, PropType, toRef } from 'vue'
-import { fetch_, defineHook } from '../utils'
-import { useAsyncData } from '../capi'
+import { computed, toRefs, unref, reactive, PropType } from 'vue'
+import { fetch_, defineHook, get, toPath } from '@/utils'
+import { useAsyncData } from '@/capi'
 import { Fn, SelectService } from '@/types'
 
 type TParams = { phrase: string; page?: number }
@@ -12,6 +12,9 @@ const definition = defineHook(
      * The source for the dropdown in the options list.
      */
     src: {} as PropType<string | unknown[] | Fn>,
+    parse: {
+      default: () => defaultParse,
+    },
     fetch: {
       default: () => fetch_,
     },
@@ -38,15 +41,29 @@ const definition = defineHook(
       default: () => useSrc,
     },
   },
-  function (props, context, { phrase, service }) {
+  function (props, context, { phrase, service, item }) {
     const opts = reactive({
       enabled: true,
     })
+
     const params = reactive({
       phrase,
     })
 
-    return props.useSrc.call(service, opts, params)
+    const res = props.useSrc.call(service, opts, params)
+
+    const parse = computed(() => normalizeParse(props.parse))
+
+    const parsed = computed(() =>
+      (unref(parse)(unref(res.data) || []) as unknown[]).map((e) =>
+        unref(item).ofRaw(e)
+      )
+    )
+
+    return reactive({
+      ...res,
+      data: parsed,
+    })
   }
 )
 
@@ -73,11 +90,11 @@ function useSrc(
       fetcher.call(this, unref(k).at(-1) || { phrase: '' })
   })
 
-  return reactive({
+  return {
     async,
     dynamic,
-    ...toRefs(useAsyncData(key, fetcher, opts)),
-  })
+    ...useAsyncData(key, fetcher, opts),
+  }
 }
 
 // check weather options depend on the query
@@ -112,6 +129,23 @@ function fetcher(this: SelectService, params: { phrase: string }) {
     )
 
   return config || []
+}
+
+function normalizeParse(parse: unknown) {
+  if (typeof parse == 'function') return parse
+
+  if (typeof parse == 'string') return get.bind(null, toPath(parse))
+
+  return defaultParse
+}
+
+// finds array of items in api response
+function defaultParse(res: any): unknown[] {
+  return (
+    [res]
+      .concat(Object.values(res || []))
+      .find((item) => Array.isArray(item)) || []
+  )
 }
 
 /* 

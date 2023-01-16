@@ -6,18 +6,32 @@ import { extractDefaults, isPrimitive, toRefsSafe } from '@/utils'
 import phrase from '@/hooks/phrase'
 import item from '@/hooks/item'
 import src from '@/hooks/src'
-import items from '@/hooks/items'
+import debouncePhrase from '@/hooks/debouncePhrase'
 import model from '@/hooks/model'
+import items from '@/hooks/items'
+import pointer from '@/hooks/pointer'
+
 import ui from '@/hooks/ui'
 
-const map = { phrase, item, src, items, model, ui } as const
+const map = {
+  phrase,
+  item,
+  src,
+  debouncePhrase,
+  model,
+  items,
+  pointer,
+  ui,
+} as const
 
 export const props = {
   ...phrase.props,
   ...item.props,
   ...src.props,
-  ...items.props,
+  ...debouncePhrase.props,
   ...model.props,
+  ...items.props,
+  ...pointer.props,
   ...ui.props,
 }
 
@@ -79,11 +93,14 @@ declare module '@/types' {
     props: Config
     context: Partial<SetupContext>
     defaults: Config
+
     phrase: ReturnType<typeof phrase['hook']>
     item: ReturnType<typeof item['hook']>
     src: ReturnType<typeof src['hook']>
-    items: ReturnType<typeof items['hook']>
+    debouncePhrase: ReturnType<typeof debouncePhrase['hook']>
     model: ReturnType<typeof model['hook']>
+    items: ReturnType<typeof items['hook']>
+    pointer: ReturnType<typeof pointer['hook']>
     ui: ReturnType<typeof ui['hook']>
     service: SelectService
   }

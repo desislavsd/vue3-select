@@ -1,5 +1,5 @@
 import { Item, MaybeArray, UpdateHandler } from '@/types'
-import { reactive, unref, computed, PropType, watchEffect } from 'vue'
+import { reactive, unref, computed, PropType, watchEffect, toRef } from 'vue'
 import { defineHook, isset } from '../utils'
 import { useVModel } from '@/capi'
 
@@ -10,9 +10,13 @@ const definition = defineHook(
       default: undefined,
     },
     modelValue: {},
-    'onUpdate:modelValue': [Function] as PropType<UpdateHandler>,
+    'onUpdate:modelValue': [Function] as PropType<
+      UpdateHandler<Item['value'], { value: MaybeArray<Item> }>
+    >,
   },
-  function (props, context, { items, item, service }) {
+  function (props, context, { src, item, service }) {
+    const items = toRef(src, 'data')
+
     const isMultiple = computed(
       () => props.multiple === true || Array.isArray(props.modelValue)
     )

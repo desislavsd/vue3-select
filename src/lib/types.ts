@@ -14,11 +14,12 @@ export type WithoutFirstParameter<F extends Fn> = WithoutFirst<Parameters<F>>
 
 export type Fn<R = unknown> = (...args: any[]) => R
 
-export type Item = SelectService['items']['value'][number]
+export type Item = SelectService['src']['data'][number]
 
-export type UpdateHandler = (
-  value: any,
-  context: { service: SelectService }
+export type UpdateHandler<TValue = unknown, TContext extends object = {}> = (
+  this: SelectService,
+  value: TValue,
+  context: { service: SelectService } & TContext
 ) => void
 
 export type Not<T, N> = T extends N ? never : T

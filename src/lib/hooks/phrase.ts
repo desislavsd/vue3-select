@@ -11,7 +11,7 @@ export default defineHook(
     phrase: {
       default: '',
     },
-    'onUpdate:phrase': {} as PropType<UpdateHandler>,
+    'onUpdate:phrase': {} as PropType<UpdateHandler<string>>,
   },
   (props, ctx, { service }) => {
     const { proxy, set, busy } = useVModel(props, 'phrase', {

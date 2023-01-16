@@ -1,16 +1,5 @@
-import {
-  reactive,
-  ref,
-  provide,
-  inject,
-  unref,
-  computed,
-  watch,
-  Ref,
-  UnwrapRef,
-} from 'vue'
+import { ref, unref, computed, watch, Ref } from 'vue'
 import { MaybeRef } from '@/types'
-import { reactiveComputed } from '@vueuse/core'
 import { isset, mapObj } from '@/utils'
 
 const defaults = { enabled: true }
@@ -50,12 +39,12 @@ export function useAsyncData(
     deep: true,
   })
 
-  return reactive({
+  return {
     ...(mapObj(defaults, (name) =>
       computed(() => unref(state)[name])
     ) as unknown as typeof defaults),
     refresh,
-  })
+  }
 }
 
 type oo = {} extends object ? true : false

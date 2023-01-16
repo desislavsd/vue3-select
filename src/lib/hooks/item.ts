@@ -37,7 +37,11 @@ class Item {
     const data = spec.order.reduce(
       (m, e) => ({
         ...m,
-        [e]: as.primitive ? raw : as[e] ? as[e](raw) : raw,
+        [e]: as.primitive
+          ? raw
+          : typeof as[e] == 'function'
+          ? as[e]?.(raw as object)
+          : raw,
       }),
       { raw }
     ) as Item
@@ -60,7 +64,7 @@ class Item {
 
     const raw = as.value ? {} : value
 
-    as.value?.(raw, value)
+    as.value?.(raw as object, value)
 
     return this.ofRaw(raw, { poor: as.poor })
   }
@@ -81,7 +85,8 @@ class Item {
 
   // TODO: support non primitive comparisons
   equals(item: any) {
-    if (!(item instanceof Item)) item = this.constructor.ofValue?.(item) || item
+    if (!(item instanceof Item))
+      item = (this.constructor as typeof Item).ofValue?.(item) || item
     return this.index == item.index
   }
 
@@ -95,7 +100,7 @@ class Item {
 
 function useAs(asProp: MaybeRef<AsType> = []) {
   return computed(() => {
-    let as = unref(asProp)
+    let as = unref(asProp) as any
 
     if (typeof as == 'string') as = as.split(spec.rx)
 
@@ -243,6 +248,7 @@ if (import.meta.vitest) {
       it(`Auto ${name}`, () => {
         // @ts-ignore
         const Item = unref(definition.hook({ as: vars.as }))
+        // @ts-ignore
         const item = Item[vars.method || 'ofRaw'](vars.shape)
         const res = {
           poor: Item.as.poor,
