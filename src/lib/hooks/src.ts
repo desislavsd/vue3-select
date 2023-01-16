@@ -3,6 +3,9 @@ import { fetch_, defineHook } from '../utils'
 import { useAsyncData } from '../capi'
 import { Fn, SelectService } from '@/types'
 
+type TParams = { phrase: string; page?: number }
+type TOpts = { enabled: boolean }
+
 const definition = defineHook(
   {
     /**
@@ -22,7 +25,16 @@ const definition = defineHook(
      * Notice: This prop is currently non reactive;
      */
     useSrc: {
-      type: [Function],
+      type: [Function] as PropType<
+        (
+          this: SelectService,
+          opts: TOpts,
+          params: TParams
+        ) => ReturnType<typeof useAsyncData> & {
+          async: boolean
+          dynamic: boolean
+        }
+      >,
       default: () => useSrc,
     },
   },

@@ -18,110 +18,56 @@ import {
   getCurrentInstance,
   watchEffect,
   PropType,
+  Ref,
+  ExtractPropTypes,
 } from 'vue'
 import { debounce, defineHook, toPath, get, craw } from '@/utils'
 
 type FilterProp = boolean | string | string[] | typeof defaultFilter
 
-const uiItemsHook = defineHook(
-  {
-    filter: {
-      type: [Boolean, String, Function, Array] as PropType<FilterProp>,
-      default: undefined,
-    },
-    filterBy: {} as PropType<Not<FilterProp, boolean>>,
-    tagging: [Boolean, String, Array] as PropType<boolean | MaybeArray<string>>,
-    tagOn: {
-      type: [String, Array] as PropType<MaybeArray<string>>,
-      default: 'Enter,Tab, ,',
-    },
-    mode: {
-      type: String as PropType<'skip' | 'append' | 'toggle'>,
-      default: 'skip',
-    },
-    /**
-     * Function that returns true for options that should be disabled
-     */
-    // disable: {
-    //   type: Function as PropType<(this: SelectService, item: Item) => boolean>,
-    // },
+const uiProps = {
+  id: {
+    type: String,
   },
-  (props, ctx, { phrase, items, src, model, item }) => {
-    const tagging = computed(() => !!unref(props.tagging))
+  placeholder: {
+    default: 'Search...',
+  },
+  debounce: {
+    type: [Boolean, Number],
+    default: undefined,
+  },
+  defaultDebounce: {
+    default: 500,
+  },
+  /**
+   * Makes phrase reflect highlighted item
+   */
+  typeahead: {
+    type: [Boolean],
+    default: undefined,
+  },
+  filter: {
+    type: [Boolean, String, Function, Array] as PropType<FilterProp>,
+    default: undefined,
+  },
+  filterBy: {} as PropType<Not<FilterProp, boolean>>,
+  tagging: [Boolean, String, Array] as PropType<boolean | MaybeArray<string>>,
+  tagOn: {
+    type: [String, Array] as PropType<MaybeArray<string>>,
+    default: 'Enter,Tab, ,',
+  },
+  mode: {
+    type: String as PropType<'skip' | 'append' | 'toggle'>,
+    default: 'skip',
+  },
+  /**
+   * Function that returns true for options that should be disabled
+   */
+  // disable: {
+  //   type: Function as PropType<(this: SelectService, item: Item) => boolean>,
+  // },
+}
 
-    const flags = reactive({
-      tagging,
-      tagOn: computed(
-        () =>
-          (
-            [props.tagging, props.tagOn]
-              .map(unref)
-              .map((e) =>
-                typeof e == 'string' ? e.split(/,/).map((e) => e || ',') : e
-              )
-              .find((e) => Array.isArray(e)) as undefined | string[]
-          )?.filter(Boolean) || []
-      ),
-      mode: toRef(props, 'mode'),
-    })
-
-    const filter = computed(() => {
-      if (!props.filter)
-        if (src.dynamic)
-          // auto decide if filter should be applied
-          // dynamic items are filtered serverside
-          return false
-
-      return normalizeFilter(props.filter)
-    })
-
-    const moded = computed(() => {
-      return flags.mode == 'skip'
-        ? unref(items).filter((e) => !model.value.some((s) => s.equals(e)))
-        : unref(items)
-    })
-
-    const filtered = computed(() => {
-      if (!unref(phrase) || !unref(filter)) return unref(moded)
-
-      return unref(moded).filter((item) =>
-        (unref(filter) as Fn<boolean>)(item, unref(phrase))
-      )
-    })
-
-    const tags = computed(() => {
-      // TODO: add check if tagging is enabled
-      if (!props.tagging || !src.data || !unref(phrase)) return []
-
-      const tag = unref(item).ofPhrase(unref(phrase))
-
-      if (unref(filtered).some((e) => e.matches(tag))) return []
-
-      return [tag]
-    })
-
-    const value = computed(() => unref(tags).concat(unref(filtered)))
-
-    const pointer = usePointer(value)
-
-    function select(items = [pointer.item].filter(Boolean)) {
-      if (!items.length) return
-
-      model.isMultiple
-        ? props.mode == 'append'
-          ? model.append(items)
-          : model.toggle(items)
-        : model.append(items)
-    }
-
-    return reactive({
-      value,
-      flags,
-      pointer,
-      select,
-    })
-  }
-)
 // TODO:
 // or clearOn: select/blur/escape
 // or closeOn: select/blur/escape
@@ -130,29 +76,7 @@ const uiItemsHook = defineHook(
 // virtual scroll
 // pagination
 const definition = defineHook(
-  {
-    id: {
-      type: String,
-    },
-    placeholder: {
-      default: 'Search...',
-    },
-    debounce: {
-      type: [Boolean, Number],
-      default: undefined,
-    },
-    defaultDebounce: {
-      default: 500,
-    },
-    /**
-     * Makes phrase reflect highlighted item
-     */
-    typeahead: {
-      type: [Boolean],
-      default: undefined,
-    },
-    ...uiItemsHook.props,
-  },
+  uiProps,
   function (props, ctx, { phrase, src, model, service }) {
     const vm = getCurrentInstance()
     const id = computed(
@@ -166,14 +90,13 @@ const definition = defineHook(
       valid: false,
     })
 
-    const items = uiItemsHook.hook(props, ctx, service)
+    const debouncePhrase = useDebouncePhrase()
+
+    const items = useUIItems(props, service, debouncePhrase)
 
     const { pointer } = items
 
-    /**
-     * Local version of `phrase` with debounce support;
-     */
-    const inputValue = useInputValue()
+    const inputValue = useTypeAheadPhrase()
 
     onMounted(detectValid)
 
@@ -277,42 +200,67 @@ const definition = defineHook(
     }
 
     /**
-     * Creates local version of `phrase` with debounce supp since
-     * binding phrase directly to input in combination with
-     * debounced updates results in wrong phrase update
-     * when component rerenders becuse of something else (i.e async search results)
+     * Creates proxy to phrase with typeahead support,
+     * i.e. its value is the label of the pointed item
+     * and fallbacks to the value of the original phrase
      */
-    function useInputValue() {
-      const phrase_ = ref('')
+    function useTypeAheadPhrase() {
+      const value = debouncePhrase
 
-      watchEffect(() => (phrase_.value = phrase.value))
-
-      watch(
-        phrase_,
-        unref(
-          computed(() => {
-            const f = () => (phrase.value = phrase_.value.trim())
-            if (!src.async && !props.debounce) return f
-            const t =
-              typeof props.debounce == 'number'
-                ? props.debounce
-                : props.defaultDebounce
-            return debounce(t, f)
-          })
-        )
-      )
-
-      return computed({
+      // proxy to the local phrase value that
+      const proxy = computed({
         get() {
-          if (!props.typeahead) return unref(phrase_)
+          if (!props.typeahead) return unref(value)
 
           return ((flags.opened && !pointer.item?.new && pointer.item?.label) ||
-            unref(phrase_)) as string
+            unref(value)) as string
         },
         set(v: string) {
-          phrase_.value = v
+          value.value = v
         },
       })
+
+      return proxy
+    }
+
+    /**
+     * Creates local proxy for the phrase with realtime sync down
+     * but debounced sync up to the original phrase, since
+     * binding phrase directly to input in combination with
+     * debounced updates results in wrong phrase update
+     * when component RErenders because of something else (i.e async search results)
+     */
+    function useDebouncePhrase() {
+      // local phrase value
+      const value = ref('')
+
+      const debouncedSyncUp = computed(() => {
+        if (!src.async && !props.debounce) return syncUp
+
+        const t =
+          typeof props.debounce == 'number'
+            ? props.debounce
+            : props.defaultDebounce
+
+        return debounce(t, syncUp)
+      })
+
+      // update local value whenever global phrase changes
+      watchEffect(syncDown)
+
+      // add potentially debounced watcher to update
+      // global phrase with the local one
+      watch(value, unref(debouncedSyncUp))
+
+      function syncDown() {
+        value.value = phrase.value
+      }
+
+      function syncUp() {
+        phrase.value = value.value.trim()
+      }
+
+      return value
     }
 
     return reactive({
@@ -357,6 +305,97 @@ const definition = defineHook(
 )
 
 export default definition
+
+/**
+ * Returns items for the UI by taking in consideration:
+ * tagging, clientside filtering, src actuality etc..
+ */
+function useUIItems(
+  props: ExtractPropTypes<typeof uiProps>,
+  { phrase, items: parsedItems, src, model, item }: SelectService,
+  inputValue: Ref<string>
+) {
+  // Because of the phrase debounce, the value of the input may
+  // be different from the phrase corresponding to the current src response;
+  // in which case the response shold be discarded and the items should be an empty array
+  const items = computed(() =>
+    unref(phrase) == unref(inputValue) ? unref(parsedItems) : []
+  )
+
+  const tagging = computed(() => !!unref(props.tagging))
+
+  const flags = reactive({
+    tagging,
+    tagOn: computed(
+      () =>
+        (
+          [props.tagging, props.tagOn]
+            .map(unref)
+            .map((e) =>
+              typeof e == 'string' ? e.split(/,/).map((e) => e || ',') : e
+            )
+            .find((e) => Array.isArray(e)) as undefined | string[]
+        )?.filter(Boolean) || []
+    ),
+    mode: toRef(props, 'mode'),
+  })
+
+  const filter = computed(() => {
+    if (!props.filter)
+      if (src.dynamic)
+        // auto decide if filter should be applied
+        // dynamic items are filtered serverside
+        return false
+
+    return normalizeFilter(props.filter)
+  })
+
+  const moded = computed(() => {
+    return flags.mode == 'skip'
+      ? unref(items).filter((e) => !model.value.some((s) => s.equals(e)))
+      : unref(items)
+  })
+
+  const filtered = computed(() => {
+    if (!unref(phrase) || !unref(filter)) return unref(moded)
+
+    return unref(moded).filter((item) =>
+      (unref(filter) as Fn<boolean>)(item, unref(phrase))
+    )
+  })
+
+  const tags = computed(() => {
+    // TODO: add check if tagging is enabled
+    if (!props.tagging || !src.data || !unref(phrase)) return []
+
+    const tag = unref(item).ofPhrase(unref(phrase))
+
+    if (unref(filtered).some((e) => e.matches(tag))) return []
+
+    return [tag]
+  })
+
+  const value = computed(() => unref(tags).concat(unref(filtered)))
+
+  const pointer = usePointer(value)
+
+  function select(items = [pointer.item].filter(Boolean)) {
+    if (!items.length) return
+
+    model.isMultiple
+      ? props.mode == 'append'
+        ? model.append(items)
+        : model.toggle(items)
+      : model.append(items)
+  }
+
+  return reactive({
+    value,
+    flags,
+    pointer,
+    select,
+  })
+}
 
 function usePointer(items: MaybeRef<Item[]>) {
   const _index = ref(-1)
@@ -409,7 +448,7 @@ function normalizeFilter(filter?: FilterProp) {
   return filterByProps.bind(null, ['label'])
 }
 
-function filterByProps(props: string[], item: any, phrase: string) {
+function filterByProps(props: string[], item: Item, phrase: string) {
   phrase = phrase.toLowerCase()
 
   return props
