@@ -47,7 +47,7 @@ export async function fetch_<T = unknown>(url: string): Promise<T> {
   return await res.json()
 }
 
-export function isset(x: unknown) {
+export function isset(x: any) {
   return ![undefined, '', null, NaN].includes(x)
 }
 
@@ -94,7 +94,7 @@ export function defaultsToProps<T extends object>(defaults: T) {
   }
 }
 
-export function extractDefaults<T>(
+export function extractDefaults<T extends object>(
   props: T,
   unwrap: boolean = false
 ): ExtractPropTypes<T> {

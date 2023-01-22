@@ -32,7 +32,7 @@ export default defineHook(
     // be different from the phrase corresponding to the current src response;
     // in which case the response shold be discarded and the items should be an empty array
     const items = computed(() =>
-      unref(phrase) == unref(inputValue) ? src.data : []
+      phrase.value == unref(inputValue) ? src.data : []
     )
 
     const tagging = computed(() => !!unref(props.tagging))
@@ -70,18 +70,18 @@ export default defineHook(
     })
 
     const filtered = computed(() => {
-      if (!unref(phrase) || !unref(filter)) return unref(moded)
+      if (!phrase.value || !unref(filter)) return unref(moded)
 
       return unref(moded).filter((item) =>
-        (unref(filter) as Fn<boolean>)(item, unref(phrase))
+        (unref(filter) as Fn<boolean>)(item, phrase.value)
       )
     })
 
     const tags = computed(() => {
       // TODO: add check if tagging is enabled
-      if (!props.tagging || !src.data || !unref(phrase)) return []
+      if (!props.tagging || !src.data || !phrase.value) return []
 
-      const tag = unref(item).ofPhrase(unref(phrase))
+      const tag = unref(item).ofPhrase(phrase.value)
 
       if (unref(filtered).some((e) => e.matches(tag))) return []
 

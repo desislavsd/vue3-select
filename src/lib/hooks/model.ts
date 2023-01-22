@@ -46,6 +46,8 @@ const definition = defineHook(
       },
     })
 
+    const poor = computed(() => model.value.some((e) => e.poor))
+
     watchEffect(() => (oldValue = model.value))
 
     // appends selected option to model value
@@ -104,6 +106,7 @@ const definition = defineHook(
 
     return reactive({
       value: model,
+      poor,
       busy,
       isMultiple,
       append,

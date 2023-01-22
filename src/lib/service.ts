@@ -1,8 +1,9 @@
-import { SetupContext, reactive, PropType, ExtractPropTypes } from 'vue'
-import { SelectService, Config } from '@/types'
+import { SetupContext, reactive, ref, Ref } from 'vue'
+import { SelectService, Config, UnionToIntersection, Fn } from '@/types'
 import { extractDefaults, isPrimitive, toRefsSafe } from '@/utils'
 
 // hooks
+import enabled from '@/hooks/enabled'
 import phrase from '@/hooks/phrase'
 import item from '@/hooks/item'
 import src from '@/hooks/src'
@@ -14,6 +15,7 @@ import pointer from '@/hooks/pointer'
 import ui from '@/hooks/ui'
 
 const map = {
+  enabled,
   phrase,
   item,
   src,
@@ -24,19 +26,34 @@ const map = {
   ui,
 } as const
 
-export const props = {
-  ...phrase.props,
-  ...item.props,
-  ...src.props,
-  ...debouncePhrase.props,
-  ...model.props,
-  ...items.props,
-  ...pointer.props,
-  ...ui.props,
-}
+export const props = Object.assign(
+  {},
+  ...Object.values(map).map((e) => e.props)
+) as UnionToIntersection<typeof map[keyof typeof map]['props']>
 
 // original defaults; they may not reflect current defaults if defineConfig is used
 export const defaults = extractDefaults(props)
+
+declare module '@/types' {
+  export type Config = typeof defaults
+  export interface SelectService {
+    ready: Ref<boolean>
+    props: Config
+    context: Partial<SetupContext>
+    defaults: Config
+
+    enabled: ReturnType<typeof enabled['hook']>
+    phrase: ReturnType<typeof phrase['hook']>
+    item: ReturnType<typeof item['hook']>
+    src: ReturnType<typeof src['hook']>
+    debouncePhrase: ReturnType<typeof debouncePhrase['hook']>
+    model: ReturnType<typeof model['hook']>
+    items: ReturnType<typeof items['hook']>
+    pointer: ReturnType<typeof pointer['hook']>
+    ui: ReturnType<typeof ui['hook']>
+    service: SelectService
+  }
+}
 
 export default useService
 
@@ -69,7 +86,10 @@ export function defineConfig<T extends Partial<Config>>(config: T): T {
 }
 
 function buildService(props: Config, context: Partial<SetupContext>) {
+  const hooks: Fn[] = []
+
   const service = {
+    ready: ref(false),
     props,
     context,
     defaults,
@@ -77,31 +97,15 @@ function buildService(props: Config, context: Partial<SetupContext>) {
 
   service.service = service
 
-  return Object.entries(map).reduce(
+  Object.entries(map).reduce(
     (m, [name, def]) =>
       Object.assign(m, {
         [name]: def.hook(props, context, m as SelectService),
       }),
     service
   )
-}
 
-declare module '@/types' {
-  export type Config = typeof defaults
-  // export type Config = ExtractPropTypes<typeof props>
-  export interface SelectService {
-    props: Config
-    context: Partial<SetupContext>
-    defaults: Config
+  service.ready.value = true
 
-    phrase: ReturnType<typeof phrase['hook']>
-    item: ReturnType<typeof item['hook']>
-    src: ReturnType<typeof src['hook']>
-    debouncePhrase: ReturnType<typeof debouncePhrase['hook']>
-    model: ReturnType<typeof model['hook']>
-    items: ReturnType<typeof items['hook']>
-    pointer: ReturnType<typeof pointer['hook']>
-    ui: ReturnType<typeof ui['hook']>
-    service: SelectService
-  }
+  return service
 }

@@ -8,7 +8,7 @@ const defaults = { enabled: true }
 export function useAsyncData(
   key: MaybeRef<unknown[]>,
   fetcher: MaybeRef<(...any: any) => any>,
-  opts: MaybeRef<typeof defaults>
+  opts: typeof defaults
 ) {
   const defaults = {
     data: null as unknown,
@@ -20,7 +20,6 @@ export function useAsyncData(
   const state = ref({ ...defaults })
 
   function refresh() {
-    // if (!unref(opts)?.enabled) return
     state.value = {
       ...defaults,
       id: JSON.stringify(unref(key).map(unref)),
@@ -28,7 +27,7 @@ export function useAsyncData(
     }
     const localState = state.value
 
-    Promise.resolve(unref(fetcher)(unref(key)))
+    Promise.resolve(opts.enabled ? unref(fetcher)(unref(key)) : null)
       .then((data) => Object.assign(localState, { data }))
       .catch((error) => (localState.error = error))
       .finally(() => Object.assign(localState, { busy: false }))
@@ -37,6 +36,7 @@ export function useAsyncData(
   watch([fetcher, key, opts], refresh, {
     immediate: true,
     deep: true,
+    flush: 'post',
   })
 
   return {

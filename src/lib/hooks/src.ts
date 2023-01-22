@@ -1,4 +1,4 @@
-import { computed, toRefs, unref, reactive, PropType } from 'vue'
+import { computed, toRefs, unref, reactive, PropType, toRef } from 'vue'
 import { fetch_, defineHook, get, toPath } from '@/utils'
 import { useAsyncData } from '@/capi'
 import { Fn, SelectService } from '@/types'
@@ -41,13 +41,13 @@ const definition = defineHook(
       default: () => useSrc,
     },
   },
-  function (props, context, { phrase, service, item }) {
+  function (props, context, { phrase, service, item, enabled }) {
     const opts = reactive({
-      enabled: true,
+      enabled: computed(() => enabled.value),
     })
 
     const params = reactive({
-      phrase,
+      phrase: computed(() => phrase.value),
     })
 
     const res = props.useSrc.call(service, opts, params)

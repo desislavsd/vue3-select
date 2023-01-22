@@ -129,7 +129,7 @@ const definition = defineHook(
       const willTag =
         ev.key != 'Enter' &&
         items.flags.tagging &&
-        unref(phrase).length &&
+        phrase.value.length &&
         items.flags.tagOn.includes(ev.key)
 
       const handlers = {
@@ -156,7 +156,7 @@ const definition = defineHook(
           //     .toString()
           //     .slice(0, ev.metaKey ? 0 : -1))
           // }
-          if (unref(phrase).length) return
+          if (phrase.value.length) return
           ev.metaKey ? model.clear() : model.pop()
         },
         default() {
