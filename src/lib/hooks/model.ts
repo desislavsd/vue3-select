@@ -1,6 +1,15 @@
+import {
+  reactive,
+  unref,
+  computed,
+  PropType,
+  watchEffect,
+  toRef,
+  watch,
+  ref,
+} from 'vue'
 import { Item, MaybeArray, UpdateHandler } from '@/types'
-import { reactive, unref, computed, PropType, watchEffect, toRef } from 'vue'
-import { defineHook, isset } from '../utils'
+import { defineHook, findArray, isset } from '@/utils'
 import { useVModel } from '@/capi'
 
 const definition = defineHook(
@@ -12,6 +21,15 @@ const definition = defineHook(
     modelValue: {},
     'onUpdate:modelValue': [Function] as PropType<
       UpdateHandler<Item['value'], { value: MaybeArray<Item> }>
+    >,
+    /**
+     * Help resolve corresponding raw options from option values;
+     * Useful when model values consist only from part of the option in the list;
+     * One can provide either static array with raw options or an async function that
+     * receives current values and returns corresponding resolved raw options;
+     */
+    resolve: {} as PropType<
+      unknown[] | ((values: unknown[]) => Promise<unknown[]>)
     >,
   },
   function (props, context, { src, item, service }) {
@@ -25,7 +43,7 @@ const definition = defineHook(
 
     // no need for this to be reactive
     // its onl
-    let oldValue: Item[] = []
+    let oldValue = ref<Item[]>([])
 
     const index = computed(() => unref(items).concat(unref(oldValue)))
 
@@ -48,7 +66,41 @@ const definition = defineHook(
 
     const poor = computed(() => model.value.some((e) => e.poor))
 
-    watchEffect(() => (oldValue = model.value))
+    const resolver = computed(() => {
+      const { resolve } = props
+      const resolver = async () => {
+        if (Array.isArray(resolve)) return resolve
+        if (typeof resolve == 'function')
+          return resolve.call(
+            service,
+            model.value.map((e) => e.raw)
+          )
+        return []
+      }
+      return () =>
+        resolver().then((items) =>
+          findArray(items).map((e) => item.value.ofRaw(e))
+        )
+    })
+
+    watchEffect(() => (oldValue.value = model.value))
+
+    // watchEffect(async () => {
+    //   oldValue.value = model.value
+    //   if (!unref(poor)) return
+    //   oldValue.value = [...(await unref(resolver)()), ...unref(oldValue)]
+    // })
+
+    watch(
+      [poor, resolver],
+      async () => {
+        if (!unref(poor)) return
+        const resolved = await unref(resolver)()
+        if (!resolved?.length) return
+        oldValue.value = [...resolved, ...unref(oldValue)]
+      },
+      { flush: 'post' }
+    )
 
     // appends selected option to model value
     // no matters if it was already selected

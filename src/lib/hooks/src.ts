@@ -1,11 +1,11 @@
 import { computed, toRefs, unref, reactive, PropType, toRef } from 'vue'
-import { fetch_, defineHook, get, toPath } from '@/utils'
+import { fetch_, defineHook, get, toPath, findArray } from '@/utils'
 import { useAsyncData } from '@/capi'
 import { Fn, SelectService } from '@/types'
 
 type TParams = { phrase: string; page?: number }
 type TOpts = { enabled: boolean }
-
+const defaultParse = findArray
 const definition = defineHook(
   {
     /**
@@ -137,15 +137,6 @@ function normalizeParse(parse: unknown) {
   if (typeof parse == 'string') return get.bind(null, toPath(parse))
 
   return defaultParse
-}
-
-// finds array of items in api response
-function defaultParse(res: any): unknown[] {
-  return (
-    [res]
-      .concat(Object.values(res || []))
-      .find((item) => Array.isArray(item)) || []
-  )
 }
 
 /* 

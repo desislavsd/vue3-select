@@ -161,3 +161,14 @@ export function craw(object: object, recursive: boolean = false): string[][] {
     )
     .flat()
 }
+
+/**
+ * Finds the first array in an object/array
+ */
+export function findArray(thing) {
+  if (!thing || typeof thing != 'object') return []
+
+  if (Array.isArray(thing)) return thing
+
+  return Object.values(thing).find(Array.isArray) || []
+}
