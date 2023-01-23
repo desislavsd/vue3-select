@@ -7,6 +7,7 @@ import {
   toRef,
   watch,
   ref,
+  shallowRef,
 } from 'vue'
 import { Item, MaybeArray, UpdateHandler } from '@/types'
 import { defineHook, findArray, isset } from '@/utils'
@@ -43,7 +44,7 @@ const definition = defineHook(
 
     // no need for this to be reactive
     // its onl
-    let oldValue = ref<Item[]>([])
+    let oldValue = shallowRef<Item[]>([])
 
     const index = computed(() => unref(items).concat(unref(oldValue)))
 
@@ -73,7 +74,7 @@ const definition = defineHook(
         if (typeof resolve == 'function')
           return resolve.call(
             service,
-            model.value.map((e) => e.raw)
+            model.value.filter((e) => e.poor).map((e) => e.value)
           )
         return []
       }
@@ -83,13 +84,12 @@ const definition = defineHook(
         )
     })
 
-    watchEffect(() => (oldValue.value = model.value))
-
-    // watchEffect(async () => {
-    //   oldValue.value = model.value
-    //   if (!unref(poor)) return
-    //   oldValue.value = [...(await unref(resolver)()), ...unref(oldValue)]
-    // })
+    // store model.value to use for resolve later
+    watchEffect(() => {
+      // update oldValue without triggering reactivity
+      // to avoid reactivity ripples with `model`
+      oldValue.value.splice(0, Infinity, ...model.value)
+    })
 
     watch(
       [poor, resolver],

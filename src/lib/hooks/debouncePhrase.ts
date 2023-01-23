@@ -40,7 +40,7 @@ export default defineHook(
 
     // add potentially debounced watcher to update
     // global phrase with the local one
-    watch(value, unref(debouncedSyncUp))
+    watch(value, () => unref(debouncedSyncUp)())
 
     function syncDown() {
       value.value = phrase.value
