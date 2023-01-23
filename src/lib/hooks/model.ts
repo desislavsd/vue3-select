@@ -99,7 +99,7 @@ const definition = defineHook(
         if (!resolved?.length) return
         oldValue.value = [...resolved, ...unref(oldValue)]
       },
-      { flush: 'post' }
+      { flush: 'post', immediate: true }
     )
 
     // appends selected option to model value
