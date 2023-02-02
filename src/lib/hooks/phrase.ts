@@ -1,4 +1,4 @@
-import { computed, PropType, reactive } from 'vue'
+import { computed, PropType, reactive, Ref, ref, unref } from 'vue'
 import { Fn, UpdateHandler } from '@/types'
 import { defineHook } from '@/utils'
 import { useVModel } from '@/capi'
@@ -35,6 +35,13 @@ export default defineHook(
     validators: {
       default: () => validators,
     },
+    debounce: {
+      type: [Boolean, Number],
+      default: undefined,
+    },
+    debounceDefault: {
+      default: 500,
+    },
   },
   (props, ctx, { service }) => {
     const { proxy, set, busy } = useVModel(props, 'phrase', {
@@ -67,9 +74,48 @@ export default defineHook(
         )
     })
 
+    const debounce = computed(() =>
+      !service?.src.async && !props.debounce
+        ? 0
+        : typeof props.debounce == 'number'
+        ? props.debounce
+        : props.debounceDefault
+    )
+
+    const { type, typing } = useTypePhrase(value, reactive({ debounce }))
+
     return reactive({
       value,
       valid,
+      typing,
+      type,
     })
   }
 )
+
+function useTypePhrase(phrase: Ref<string>, opts: { debounce: number }) {
+  let timeout: NodeJS.Timeout
+
+  const _typing = ref(false)
+
+  const typing = computed(() => unref(_typing))
+
+  function stop() {
+    _typing.value &&= false
+  }
+
+  function start() {
+    _typing.value = true
+    timeout = setTimeout(stop, opts.debounce)
+  }
+
+  function type(value: string) {
+    clearTimeout(timeout)
+
+    opts.debounce ? start() : stop()
+
+    phrase.value = value
+  }
+
+  return { typing, type }
+}

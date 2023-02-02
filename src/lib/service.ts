@@ -1,4 +1,11 @@
-import { SetupContext, reactive, ref, Ref } from 'vue'
+import {
+  SetupContext,
+  reactive,
+  ref,
+  Ref,
+  shallowReactive,
+  ShallowReactive,
+} from 'vue'
 import { SelectService, Config, UnionToIntersection, Fn } from '@/types'
 import { extractDefaults, isPrimitive, toRefsSafe } from '@/utils'
 
@@ -7,7 +14,6 @@ import enabled from '@/hooks/enabled'
 import phrase from '@/hooks/phrase'
 import item from '@/hooks/item'
 import src from '@/hooks/src'
-import debouncePhrase from '@/hooks/debouncePhrase'
 import model from '@/hooks/model'
 import items from '@/hooks/items'
 import pointer from '@/hooks/pointer'
@@ -19,7 +25,6 @@ const map = {
   phrase,
   item,
   src,
-  debouncePhrase,
   model,
   items,
   pointer,
@@ -37,7 +42,7 @@ export const defaults = extractDefaults(props)
 declare module '@/types' {
   export type Config = typeof defaults
   export interface SelectService {
-    ready: Ref<boolean>
+    ready: boolean
     props: Config
     context: Partial<SetupContext>
     defaults: Config
@@ -46,12 +51,11 @@ declare module '@/types' {
     phrase: ReturnType<typeof phrase['hook']>
     item: ReturnType<typeof item['hook']>
     src: ReturnType<typeof src['hook']>
-    debouncePhrase: ReturnType<typeof debouncePhrase['hook']>
     model: ReturnType<typeof model['hook']>
     items: ReturnType<typeof items['hook']>
     pointer: ReturnType<typeof pointer['hook']>
     ui: ReturnType<typeof ui['hook']>
-    service: SelectService
+    service: ShallowReactive<SelectService>
   }
 }
 
@@ -88,12 +92,12 @@ export function defineConfig<T extends Partial<Config>>(config: T): T {
 function buildService(props: Config, context: Partial<SetupContext>) {
   const hooks: Fn[] = []
 
-  const service = {
-    ready: ref(false),
+  const service = shallowReactive({
+    ready: false,
     props,
     context,
     defaults,
-  } as SelectService
+  } as SelectService)
 
   service.service = service
 
@@ -105,7 +109,7 @@ function buildService(props: Config, context: Partial<SetupContext>) {
     service
   )
 
-  service.ready.value = true
+  service.ready = true
 
   return service
 }

@@ -23,17 +23,8 @@ const props = {
 
 export default defineHook(
   props,
-  (
-    props,
-    ctx,
-    { phrase, src, item, model, debouncePhrase: inputValue, service }
-  ) => {
-    // Because of the phrase debounce, the value of the input may
-    // be different from the phrase corresponding to the current src response;
-    // in which case the response shold be discarded and the items should be an empty array
-    const items = computed(() =>
-      phrase.value == unref(inputValue) ? src.data : []
-    )
+  (props, ctx, { phrase, src, item, model, service }) => {
+    const items = computed(() => src.data)
 
     const tagging = computed(() => !!unref(props.tagging))
 

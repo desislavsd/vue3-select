@@ -49,6 +49,13 @@ export default defineComponent({
                 {...ui.attrs.input}
               />
             </div>
+            {service.phrase.typing ? (
+              <i class="flex-shrink-0 block animate-pulse h-6 w-6 grid items-center text-center">
+                💬
+              </i>
+            ) : (
+              ''
+            )}
             {(service.model.busy || service.src.busy) && (
               <i class="flex-shrink-0 block animate-spin h-6 w-6 grid items-center text-center">
                 🛞

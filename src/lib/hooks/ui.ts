@@ -62,11 +62,7 @@ const uiProps = {
 // disabled, readonly & srcEnabled
 const definition = defineHook(
   uiProps,
-  function (
-    props,
-    ctx,
-    { phrase, src, items, pointer, debouncePhrase, model, service }
-  ) {
+  function (props, ctx, { phrase, src, items, pointer, model }) {
     const vm = getCurrentInstance()
     const id = computed(
       () => props.id || `v3s-${vm?.uid || Math.random().toString(32).slice(2)}`
@@ -188,7 +184,14 @@ const definition = defineHook(
      * and fallbacks to the value of the original phrase
      */
     function useTypeAheadPhrase() {
-      const value = debouncePhrase
+      const value = computed({
+        get() {
+          return phrase.value
+        },
+        set(v) {
+          phrase.type(v)
+        },
+      })
 
       // proxy to the local phrase value that
       const proxy = computed({

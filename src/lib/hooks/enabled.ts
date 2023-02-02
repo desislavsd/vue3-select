@@ -1,15 +1,17 @@
 import { ref, reactive, watchEffect, unref } from 'vue'
 import { defineHook } from '@/utils'
 
-export default defineHook({}, (props, ctx, { ready, service }) => {
+export default defineHook({}, (props, ctx, { service }) => {
   const enabled = ref(false)
 
   watchEffect(() => {
-    if (!unref(ready)) return (enabled.value = false)
+    if (!service.ready) return (enabled.value = false)
 
     const { src, ui, model, phrase } = service
 
-    const { valid } = phrase
+    const { valid, typing } = phrase
+
+    if (typing) return (enabled.value = false)
 
     if (model.poor /*TODO: && autoresolve */) return (enabled.value = valid)
 

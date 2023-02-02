@@ -6,6 +6,8 @@ import {
   ComponentPropsOptions,
   isReactive,
   toRefs,
+  ShallowRef,
+  ShallowReactive,
 } from 'vue'
 
 export function get(
@@ -121,7 +123,7 @@ export function defineHook<
   U extends (
     props: P,
     context: Partial<SetupContext>,
-    service: SelectService
+    service: ShallowReactive<SelectService>
   ) => unknown
 >(props: T, hook: U): { props: T; hook: U; defaults: P } {
   return {
