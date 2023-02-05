@@ -1,4 +1,11 @@
-import { Item, WithoutFirstParameter, MaybeArray, Not, Fn } from '@/types'
+import {
+  Item,
+  WithoutFirstParameter,
+  MaybeArray,
+  Not,
+  Fn,
+  SelectService,
+} from '@/types'
 import { reactive, unref, computed, toRef, PropType } from 'vue'
 import { defineHook, toPath, get, craw } from '@/utils'
 
@@ -15,9 +22,22 @@ const props = {
     type: [String, Array] as PropType<MaybeArray<string>>,
     default: 'Enter,Tab, ,',
   },
+  /**
+   * Strategy on handling selected options:
+   * skip - they won't appear in dropdown
+   * append - allows selecting same option multiple times
+   * toggle - selecting selected option will deselect it
+   * disable - selected options appear in dropdown but can't be selected anymore;
+   */
   mode: {
-    type: String as PropType<'skip' | 'append' | 'toggle'>,
+    type: String as PropType<'skip' | 'append' | 'toggle' | 'disable'>,
     default: 'skip',
+  },
+  /**
+   * Function that returns true for options that should be disabled
+   */
+  disable: {
+    type: Function as PropType<(this: SelectService, item: Item) => boolean>,
   },
 }
 
@@ -56,7 +76,7 @@ export default defineHook(
 
     const moded = computed(() => {
       return flags.mode == 'skip'
-        ? unref(items).filter((e) => !model.value.some((s) => s.equals(e)))
+        ? unref(items).filter((e) => !checkSelected(e))
         : unref(items)
     })
 
@@ -82,6 +102,8 @@ export default defineHook(
     const value = computed(() => unref(tags).concat(unref(filtered)))
 
     function select(items: Item[] = [service.pointer.item].filter(Boolean)) {
+      items = items.filter((e) => !checkDisabled(e))
+
       if (!items.length) return
 
       model.isMultiple
@@ -89,6 +111,17 @@ export default defineHook(
           ? model.append(items)
           : model.toggle(items)
         : model.append(items)
+    }
+
+    function checkSelected(item: Item) {
+      return model.value.some((s) => s.equals(item))
+    }
+
+    function checkDisabled(item: Item) {
+      return Boolean(
+        props.disable?.call(service, item) ||
+          (props.mode == 'disable' && checkSelected(item))
+      )
     }
 
     return reactive({

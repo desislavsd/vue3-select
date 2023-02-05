@@ -44,12 +44,6 @@ const uiProps = {
     type: [Boolean],
     default: undefined,
   },
-  /**
-   * Function that returns true for options that should be disabled
-   */
-  // disable: {
-  //   type: Function as PropType<(this: SelectService, item: Item) => boolean>,
-  // },
 }
 
 // TODO:
