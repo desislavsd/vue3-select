@@ -65,6 +65,7 @@ export default defineComponent({
           <ul
             class="bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md overflow-auto max-h-md"
             style={ui.flags.opened ? '' : { display: 'none' }}
+            {...ui.attrs.list}
           >
             {items.map((e, i) => (
               <li

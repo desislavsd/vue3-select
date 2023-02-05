@@ -128,6 +128,8 @@ export default defineHook(
       value,
       flags,
       select,
+      checkDisabled,
+      checkSelected,
     })
   }
 )

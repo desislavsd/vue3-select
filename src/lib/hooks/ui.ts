@@ -44,6 +44,9 @@ const uiProps = {
     type: [Boolean],
     default: undefined,
   },
+  accessible: {
+    type: Boolean,
+  },
 }
 
 // TODO:
@@ -58,9 +61,21 @@ const definition = defineHook(
   uiProps,
   function (props, ctx, { phrase, src, items, pointer, model }) {
     const vm = getCurrentInstance()
-    const id = computed(
-      () => props.id || `v3s-${vm?.uid || Math.random().toString(32).slice(2)}`
-    )
+
+    const ids = computed(() => {
+      const id =
+        props.id || `v3s-${vm?.uid || Math.random().toString(32).slice(2)}`
+
+      const mk = (...args: string[]) => [unref(id), ...args].join('-')
+
+      return {
+        root: unref(id),
+        list: mk('list'),
+        input: mk('input'),
+        option: (item: Item) => mk(`option`, item.index as string),
+      }
+    })
+
     const el = ref<HTMLElement | null>(null)
 
     const flags = reactive({
@@ -208,25 +223,73 @@ const definition = defineHook(
       pointer,
       items: toRef(items, 'value'),
       attrs: {
-        root: {
-          id,
-          onFocusin,
-          onFocusout,
-          onKeydown,
-          tabindex: -1,
-          ref(e: any) {
-            el.value = e
-          },
-          onClick: () => open(),
-        },
-        input: {
-          placeholder: toRef(props, 'placeholder'),
-          value: inputValue,
-          onInput: (ev: { target: HTMLInputElement }) =>
-            (inputValue.value = ev.target.value),
-        },
+        // attrs are constructed in IIFEs for optimization
+        // so that static attrs maybe reused accross updates;
+        root: (() => {
+          const attrs = {
+            tabindex: -1,
+            ref(e: any) {
+              el.value = e
+            },
+            onFocusin,
+            onFocusout,
+            onKeydown,
+            onClick: () => open(),
+          }
+
+          return computed(() => {
+            return {
+              id: props.id,
+              ...attrs,
+              ...(props.accessible && {
+                id: unref(ids).root,
+                'aria-haspopup': 'listbox',
+                'aria-expanded': flags.opened,
+                'aria-owns': unref(ids).list,
+              }),
+            }
+          })
+        })(),
+        input: (() => {
+          const attrs = {
+            autocomplete: 'off',
+            type: 'search',
+            onInput: (ev: { target: HTMLInputElement }) =>
+              (inputValue.value = ev.target.value),
+          }
+
+          return computed(() => {
+            return {
+              ...attrs,
+              placeholder: props.placeholder,
+              value: inputValue.value,
+              ...(props.accessible && {
+                id: unref(ids).input,
+                role: 'textbox',
+                'aria-autocomplete': 'list',
+                'aria-labelledby': '',
+                'aria-controls': unref(ids).list,
+                'aria-activedescendant': pointer.item
+                  ? unref(ids).option(pointer.item)
+                  : undefined, // selected option id,
+              }),
+            }
+          })
+        })(),
+        list: computed(() => ({
+          ...(props.accessible && {
+            id: unref(ids).list,
+            role: 'listbox',
+            'aria-hidden': (props.accessible && !flags.opened) || undefined,
+          }),
+        })),
         option(option: Item) {
           return {
+            ...(props.accessible && {
+              'aria-selected': items.checkSelected(option) || undefined,
+              role: 'option',
+              id: unref(ids).option(option),
+            }),
             onClick: (ev: Event) => {
               ev.stopPropagation()
               select([option])
