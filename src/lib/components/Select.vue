@@ -23,7 +23,7 @@ export default defineComponent({
 
     return () => {
       const { ui } = service
-      const { pointer, items } = ui
+      const { items } = ui
 
       const list = !ui.flags.readonly && !ui.flags.disabled && (
         <ul
@@ -34,14 +34,21 @@ export default defineComponent({
         >
           {items.map((e, i) => (
             <li
-              class={`h-7 flex items-center m-0 px-2 hover:bg-gray-300 cursor-pointer ${
-                pointer.index == i ? 'bg-gray-200' : ''
-              }`}
+              class={[
+                `h-7 flex items-center m-0 px-2 cursor-pointer`,
+                e.pointed && 'bg-gray-200',
+                e.disabled ? 'opacity-40' : 'hover:bg-gray-300',
+              ]}
               {...ui.attrs.option(e)}
             >
               {slots.item?.({ item: e, index: i }) ||
                 slots.both?.({ item: e, index: i }) ||
                 e.label}
+              {e.selected && (
+                <span class="text-xs opacity-30 ml-auto italic text-green-500">
+                  {ui.flags.mode == 'toggle' ? '❌' : '✔️'}
+                </span>
+              )}
               {e.new && (
                 <span class="text-xs opacity-30 ml-auto italic">create</span>
               )}

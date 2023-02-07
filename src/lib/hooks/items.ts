@@ -5,6 +5,7 @@ import {
   Not,
   Fn,
   SelectService,
+  ItemStateful,
 } from '@/types'
 import { reactive, unref, computed, toRef, PropType } from 'vue'
 import { defineHook, toPath, get, craw } from '@/utils'

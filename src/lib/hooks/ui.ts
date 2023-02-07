@@ -6,6 +6,7 @@ import {
   Not,
   SelectService,
   Fn,
+  ItemStateful,
 } from '@/types'
 import {
   reactive,
@@ -65,7 +66,7 @@ const uiProps = {
 // disabled, readonly & srcEnabled
 const definition = defineHook(
   uiProps,
-  function (props, ctx, { phrase, src, items, pointer, model }) {
+  function (props, ctx, { phrase, src, item, items, pointer, model }) {
     const vm = getCurrentInstance()
 
     const ids = computed(() => {
@@ -89,6 +90,7 @@ const definition = defineHook(
       opened: false,
       disabled: toRef(props, 'disabled'),
       readonly: toRef(props, 'readonly'),
+      mode: toRef(items.flags, 'mode'),
     })
 
     const inputValue = useTypeAheadPhrase()
@@ -108,7 +110,7 @@ const definition = defineHook(
       close()
     }
 
-    function select(...args: Item[][]) {
+    function select(...args: ItemStateful[][]) {
       items.select(...args)
       model.isMultiple || close()
       phrase.value = ''
@@ -220,7 +222,18 @@ const definition = defineHook(
     return reactive({
       flags,
       pointer,
-      items: toRef(items, 'value'),
+      items: computed(() =>
+        items.value.map(
+          (e: Item, position) =>
+            new item.value({
+              ...e,
+              position,
+              selected: items.checkSelected(e),
+              disabled: items.checkDisabled(e),
+              pointed: pointer.item?.equals(e),
+            }) as ItemStateful
+        )
+      ),
       attrs: {
         // attrs are constructed in IIFEs for optimization
         // so that static attrs maybe reused accross updates;
@@ -288,13 +301,17 @@ const definition = defineHook(
             'aria-hidden': (props.accessible && !flags.opened) || undefined,
           }),
         })),
-        option(option: Item) {
+        option(option: ItemStateful) {
           return {
             ...(props.accessible && {
               id: unref(ids).option(option),
               role: 'option',
-              'aria-selected': items.checkSelected(option) || undefined,
-              'aria-disabled': props.disabled || props.readonly || undefined,
+              'aria-selected': option.selected || undefined,
+              'aria-disabled':
+                props.disabled ||
+                props.readonly ||
+                option.disabled ||
+                undefined,
             }),
             onClick: (ev: Event) => {
               ev.stopPropagation()

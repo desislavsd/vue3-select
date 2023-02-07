@@ -19,11 +19,30 @@ export const spec = {
   order: ['label', 'value', 'index'] as const,
 }
 class Item {
+  /**
+   * The calculated display value
+   */
   label: unknown
+  /**
+   * The calculated unique id for comparisons
+   */
   index: unknown
+  /**
+   * The calculated value
+   */
   value: unknown
-  raw: unknown;
-  [key: string]: unknown
+  /**
+   * The original data
+   */
+  raw: unknown
+  /**
+   * If its created via tagging from phrase
+   */
+  new?: boolean
+  /**
+   * If its created from insufficient data
+   */
+  poor?: boolean
 
   constructor(data?: unknown) {
     Object.assign(this, data /* , { state: {} } */)
@@ -84,12 +103,19 @@ class Item {
   }
 
   // TODO: support non primitive comparisons
+
+  /**
+   * Comparison by index
+   */
   equals(item: any) {
     if (!(item instanceof Item))
       item = (this.constructor as typeof Item).ofValue?.(item) || item
     return this.index == item.index
   }
 
+  /**
+   * Comparison by phrase
+   */
   matches(item: Item) {
     return (
       item.label?.toString()?.toLowerCase() ===
