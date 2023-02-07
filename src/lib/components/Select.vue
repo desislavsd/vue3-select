@@ -25,6 +25,31 @@ export default defineComponent({
       const { ui } = service
       const { pointer, items } = ui
 
+      const list = !ui.flags.readonly && !ui.flags.disabled && (
+        <ul
+          class={`bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md overflow-auto max-h-md ${
+            ui.flags.opened || 'hidden'
+          }`}
+          {...ui.attrs.list}
+        >
+          {items.map((e, i) => (
+            <li
+              class={`h-7 flex items-center m-0 px-2 hover:bg-gray-300 cursor-pointer ${
+                pointer.index == i ? 'bg-gray-200' : ''
+              }`}
+              {...ui.attrs.option(e)}
+            >
+              {slots.item?.({ item: e, index: i }) ||
+                slots.both?.({ item: e, index: i }) ||
+                e.label}
+              {e.new && (
+                <span class="text-xs opacity-30 ml-auto italic">create</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )
+
       return (
         <div
           class={[
@@ -62,27 +87,7 @@ export default defineComponent({
               </i>
             )}
           </div>
-          <ul
-            class="bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md overflow-auto max-h-md"
-            style={ui.flags.opened ? '' : { display: 'none' }}
-            {...ui.attrs.list}
-          >
-            {items.map((e, i) => (
-              <li
-                class={`h-7 flex items-center m-0 px-2 hover:bg-gray-300 cursor-pointer ${
-                  pointer.index == i ? 'bg-gray-200' : ''
-                }`}
-                {...ui.attrs.option(e)}
-              >
-                {slots.item?.({ item: e, index: i }) ||
-                  slots.both?.({ item: e, index: i }) ||
-                  e.label}
-                {e.new && (
-                  <span class="text-xs opacity-30 ml-auto italic">create</span>
-                )}
-              </li>
-            ))}
-          </ul>
+          {list}
         </div>
       )
     }

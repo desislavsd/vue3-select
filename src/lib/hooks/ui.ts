@@ -44,6 +44,12 @@ const uiProps = {
     type: [Boolean],
     default: undefined,
   },
+  disabled: {
+    type: Boolean,
+  },
+  readonly: {
+    type: Boolean,
+  },
   accessible: {
     type: Boolean,
   },
@@ -81,12 +87,11 @@ const definition = defineHook(
     const flags = reactive({
       active: false,
       opened: false,
-      valid: false,
+      disabled: toRef(props, 'disabled'),
+      readonly: toRef(props, 'readonly'),
     })
 
     const inputValue = useTypeAheadPhrase()
-
-    onMounted(detectValid)
 
     function onFocusin(ev: FocusEvent) {
       flags.active = true
@@ -181,12 +186,6 @@ const definition = defineHook(
       }
     }
 
-    function detectValid() {
-      return (flags.valid = !!el.value
-        ?.querySelector('input')
-        ?.matches(':valid'))
-    }
-
     /**
      * Creates proxy to phrase with typeahead support,
      * i.e. its value is the label of the pointed item
@@ -246,6 +245,8 @@ const definition = defineHook(
                 'aria-haspopup': 'listbox',
                 'aria-expanded': flags.opened,
                 'aria-owns': unref(ids).list,
+                'aria-disabled': flags.disabled || undefined,
+                'aria-readonly': flags.disabled || flags.readonly || undefined,
               }),
             }
           })
@@ -254,6 +255,8 @@ const definition = defineHook(
           const attrs = {
             autocomplete: 'off',
             type: 'search',
+            readonly: flags.readonly,
+            disabled: flags.disabled,
             onInput: (ev: { target: HTMLInputElement }) =>
               (inputValue.value = ev.target.value),
           }
@@ -261,6 +264,8 @@ const definition = defineHook(
           return computed(() => {
             return {
               ...attrs,
+              readonly: flags.readonly,
+              disabled: flags.disabled,
               placeholder: props.placeholder,
               value: inputValue.value,
               ...(props.accessible && {
@@ -286,9 +291,10 @@ const definition = defineHook(
         option(option: Item) {
           return {
             ...(props.accessible && {
-              'aria-selected': items.checkSelected(option) || undefined,
-              role: 'option',
               id: unref(ids).option(option),
+              role: 'option',
+              'aria-selected': items.checkSelected(option) || undefined,
+              'aria-disabled': props.disabled || props.readonly || undefined,
             }),
             onClick: (ev: Event) => {
               ev.stopPropagation()
@@ -302,7 +308,6 @@ const definition = defineHook(
       close,
       blur,
       focus,
-      detectValid,
     })
   }
 )
