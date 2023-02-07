@@ -24,8 +24,12 @@ export type UpdateHandler<TValue = unknown, TContext extends object = {}> = (
 
 export type Not<T, N> = T extends N ? never : T
 
-export type UnionToIntersection<U> = (
-  U extends U ? (arg: U) => void : never
-) extends (arg: infer R) => void
-  ? R
-  : never
+export type UnionToIntersection<U> = Pretty<
+  (U extends U ? (arg: U) => void : never) extends (arg: infer R) => void
+    ? R
+    : never
+>
+
+export type Pretty<T> = {
+  [K in keyof T]: T[K]
+} & {}
