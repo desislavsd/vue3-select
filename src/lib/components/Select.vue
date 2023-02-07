@@ -27,9 +27,10 @@ export default defineComponent({
 
       const list = !ui.flags.readonly && !ui.flags.disabled && (
         <ul
-          class={`bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md overflow-auto max-h-md ${
-            ui.flags.opened || 'hidden'
-          }`}
+          class={[
+            'bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md overflow-auto max-h-30',
+            ui.flags.opened || 'hidden',
+          ]}
           {...ui.attrs.list}
         >
           {items.map((e, i) => (

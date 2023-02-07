@@ -21,6 +21,8 @@ import {
   PropType,
   Ref,
   ExtractPropTypes,
+  onBeforeUpdate,
+  nextTick,
 } from 'vue'
 import { debounce, defineHook, toPath, get, craw } from '@/utils'
 
@@ -45,25 +47,19 @@ const uiProps = {
     type: [Boolean],
     default: undefined,
   },
-  disabled: {
-    type: Boolean,
-  },
-  readonly: {
-    type: Boolean,
-  },
-  accessible: {
-    type: Boolean,
-  },
+  disabled: Boolean,
+  readonly: Boolean,
+  accessible: Boolean,
+  autoscroll: { type: Boolean, default: true },
 }
 
 // TODO:
 // or clearOn: select/blur/escape
 // or closeOn: select/blur/escape
+// highlight first
 // resolve
-// useQuery
 // virtual scroll
 // pagination
-// disabled, readonly & srcEnabled
 const definition = defineHook(
   uiProps,
   function (props, ctx, { phrase, src, item, items, pointer, model }) {
@@ -83,7 +79,12 @@ const definition = defineHook(
       }
     })
 
-    const el = ref<HTMLElement | null>(null)
+    const els = reactive({
+      root: ref<HTMLElement | null>(null),
+      list: ref<HTMLElement | null>(null),
+      input: ref<HTMLElement | null>(null),
+      options: ref<HTMLElement[]>([]),
+    })
 
     const flags = reactive({
       active: false,
@@ -95,6 +96,12 @@ const definition = defineHook(
 
     const inputValue = useTypeAheadPhrase()
 
+    onBeforeUpdate(() => (els.options = []))
+
+    watchEffect(() => props.autoscroll && scrollTo(pointer.index), {
+      flush: 'post',
+    })
+
     function onFocusin(ev: FocusEvent) {
       flags.active = true
       // open()
@@ -104,7 +111,7 @@ const definition = defineHook(
 
     function onFocusout(ev: FocusEvent & { relatedTarget: HTMLElement }) {
       // do nothing if focus is still within the the root element
-      if (el.value?.matches(':focus-within')) return
+      if (els.root?.matches(':focus-within')) return
       phrase.value = ''
       flags.active = false
       close()
@@ -128,12 +135,12 @@ const definition = defineHook(
     }
 
     function focus() {
-      el.value?.querySelector('input')?.focus()
+      els.root?.querySelector('input')?.focus()
     }
 
     function blur() {
       const focused: HTMLElement | null =
-        el.value?.querySelector(':focus') || el.value
+        els.root?.querySelector(':focus') || els.root
       focused?.blur()
     }
 
@@ -219,7 +226,20 @@ const definition = defineHook(
       return proxy
     }
 
+    function scrollTo(position: number) {
+      const el = els.options[position]
+      if (!els.list) return
+      const to = el
+        ? Math.round(
+            el.offsetTop + el.offsetHeight - els.list?.offsetHeight / 2
+          )
+        : 0
+
+      els.list.scrollTop = to
+    }
+
     return reactive({
+      els,
       flags,
       pointer,
       items: computed(() =>
@@ -240,9 +260,7 @@ const definition = defineHook(
         root: (() => {
           const attrs = {
             tabindex: -1,
-            ref(e: any) {
-              el.value = e
-            },
+            ref: (e: any) => (els.root = e),
             onFocusin,
             onFocusout,
             onKeydown,
@@ -270,6 +288,7 @@ const definition = defineHook(
             type: 'search',
             readonly: flags.readonly,
             disabled: flags.disabled,
+            ref: (e: any) => (els.input = e),
             onInput: (ev: { target: HTMLInputElement }) =>
               (inputValue.value = ev.target.value),
           }
@@ -294,13 +313,20 @@ const definition = defineHook(
             }
           })
         })(),
-        list: computed(() => ({
-          ...(props.accessible && {
-            id: unref(ids).list,
-            role: 'listbox',
-            'aria-hidden': (props.accessible && !flags.opened) || undefined,
-          }),
-        })),
+        list: (() => {
+          const attrs = {
+            ref: (e: any) => (els.list = e),
+          }
+
+          return computed(() => ({
+            ...attrs,
+            ...(props.accessible && {
+              id: unref(ids).list,
+              role: 'listbox',
+              'aria-hidden': (props.accessible && !flags.opened) || undefined,
+            }),
+          }))
+        })(),
         option(option: ItemStateful) {
           return {
             ...(props.accessible && {
@@ -313,6 +339,7 @@ const definition = defineHook(
                 option.disabled ||
                 undefined,
             }),
+            ref: (e: any) => (els.options[option.position] = e),
             onClick: (ev: Event) => {
               ev.stopPropagation()
               select([option])
@@ -325,6 +352,7 @@ const definition = defineHook(
       close,
       blur,
       focus,
+      scrollTo,
     })
   }
 )
