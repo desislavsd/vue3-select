@@ -25,6 +25,7 @@ import {
   nextTick,
 } from 'vue'
 import { debounce, defineHook, toPath, get, craw } from '@/utils'
+import { useIntersectionObserver } from '@/capi'
 
 const uiProps = {
   id: {
@@ -51,6 +52,14 @@ const uiProps = {
   readonly: Boolean,
   accessible: Boolean,
   autoscroll: { type: Boolean, default: true },
+  /**
+   * Limit the number of options displayed;
+   * The rest will be loaded with infinite scroll on demand
+   */
+  limit: {
+    type: Number,
+    default: 15,
+  },
 }
 
 // TODO:
@@ -58,7 +67,6 @@ const uiProps = {
 // or closeOn: select/blur/escape
 // highlight first
 // resolve
-// virtual scroll
 // pagination
 const definition = defineHook(
   uiProps,
@@ -80,9 +88,9 @@ const definition = defineHook(
     })
 
     const els = reactive({
-      root: ref<HTMLElement | null>(null),
-      list: ref<HTMLElement | null>(null),
-      input: ref<HTMLElement | null>(null),
+      root: ref<HTMLElement | undefined>(),
+      list: ref<HTMLElement | undefined>(),
+      input: ref<HTMLElement | undefined>(),
       options: ref<HTMLElement[]>([]),
     })
 
@@ -93,6 +101,21 @@ const definition = defineHook(
       readonly: toRef(props, 'readonly'),
       mode: toRef(items.flags, 'mode'),
     })
+
+    const { items: paginatedItems, scrollTo } = useInfiniteScroll()
+
+    const uiItems = computed(() =>
+      paginatedItems.value.map(
+        (e, position) =>
+          new item.value({
+            ...e,
+            position,
+            selected: items.checkSelected(e),
+            disabled: items.checkDisabled(e),
+            pointed: pointer.item?.equals(e),
+          }) as ItemStateful
+      )
+    )
 
     const inputValue = useTypeAheadPhrase()
 
@@ -118,7 +141,7 @@ const definition = defineHook(
     }
 
     function select(...args: ItemStateful[][]) {
-      items.select(...args)
+      flags.readonly || flags.disabled || items.select(...args)
       model.isMultiple || close()
       phrase.value = ''
     }
@@ -226,34 +249,72 @@ const definition = defineHook(
       return proxy
     }
 
-    function scrollTo(position: number) {
-      const el = els.options[position]
-      if (!els.list) return
-      const to = el
-        ? Math.round(
-            el.offsetTop + el.offsetHeight - els.list?.offsetHeight / 2
-          )
-        : 0
+    /**
+     * Paginates the items client side in order
+     * to render less nodes; More nodes are rendered on demand;
+     */
+    function useInfiniteScroll() {
+      const page = ref(1)
 
-      els.list.scrollTop = to
+      const isLast = computed(
+        () => page.value * props.limit >= items.value.length
+      )
+
+      watch(
+        [toRef(phrase, 'value'), toRef(src, 'data')],
+        () => (page.value = 1),
+        { flush: 'pre' }
+      )
+
+      useIntersectionObserver(
+        reactive({
+          target: computed(() => els.options?.at(-1)),
+          root: toRef(els, 'list'),
+          rootMargin: '50px',
+          callback: ([{ isIntersecting }]) => {
+            if (!isIntersecting) return
+
+            if (unref(isLast)) return
+
+            const st = els.list?.scrollTop || 0
+
+            page.value += 1
+
+            nextTick(() => {
+              if (els.list) els.list.scrollTop = st
+            })
+          },
+        })
+      )
+
+      function scrollTo(position: number) {
+        // ensure enough options are loaded
+        page.value = Math.max(Math.ceil(position / props.limit), page.value)
+
+        const el = els.options?.[position],
+          { list } = els
+
+        if (!list || !el) return
+
+        const to = el
+          ? Math.round(el.offsetTop + el.offsetHeight - list?.offsetHeight / 2)
+          : 0
+
+        list.scrollTop = to
+      }
+
+      return {
+        items: computed(() => items.value.slice(0, unref(page) * props.limit)),
+        page,
+        scrollTo,
+      }
     }
 
     return reactive({
       els,
       flags,
       pointer,
-      items: computed(() =>
-        items.value.map(
-          (e: Item, position) =>
-            new item.value({
-              ...e,
-              position,
-              selected: items.checkSelected(e),
-              disabled: items.checkDisabled(e),
-              pointed: pointer.item?.equals(e),
-            }) as ItemStateful
-        )
-      ),
+      items: uiItems,
       attrs: {
         // attrs are constructed in IIFEs for optimization
         // so that static attrs maybe reused accross updates;

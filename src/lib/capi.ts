@@ -1,5 +1,5 @@
-import { ref, unref, computed, watch, Ref } from 'vue'
-import { MaybeRef } from '@/types'
+import { ref, unref, computed, watch, Ref, toRefs, onScopeDispose } from 'vue'
+import { Fn, MaybeRef, Pretty } from '@/types'
 import { isset, mapObj } from '@/utils'
 
 const defaults = { enabled: true }
@@ -108,4 +108,27 @@ export function useBusy() {
       if (state.value == val) state.value = undefined
     },
   })
+}
+
+export function useIntersectionObserver(
+  options: Pretty<
+    IntersectionObserverInit & {
+      target?: HTMLElement | undefined
+      callback: IntersectionObserverCallback
+    }
+  >
+) {
+  let observer: IntersectionObserver | undefined
+
+  watch(Object.values(toRefs(options)), () => {
+    observer?.disconnect()
+
+    if (![options.target, options.root].every(Boolean)) return
+
+    observer = new IntersectionObserver(options.callback, options)
+
+    observer.observe(options.target as Element)
+  })
+
+  onScopeDispose(() => observer?.disconnect())
 }

@@ -70,7 +70,11 @@ export default defineComponent({
             {service.model.value.map((e, i) => (
               <span
                 class="vue3-select__selected flex items-center text-sm px-2 py-1 bg-gray-300 hover:bg-gray-200 rounded-sm cursor-pointer"
-                onClick={() => service.model.remove(i)}
+                onClick={() =>
+                  ui.flags.readonly ||
+                  ui.flags.disabled ||
+                  service.model.remove(i)
+                }
               >
                 {slots.both?.({ item: e, index: i }) || e.label}
               </span>
