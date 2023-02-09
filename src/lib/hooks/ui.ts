@@ -97,9 +97,11 @@ const definition = defineHook(
 
     onBeforeUpdate(() => (els.options = []))
 
-    watchEffect(() => props.autoscroll && scrollTo(pointer.index), {
-      flush: 'post',
-    })
+    watch([toRef(props, 'autoscroll')], autoscroll)
+
+    function autoscroll() {
+      props.autoscroll && scrollTo(pointer.index)
+    }
 
     function onFocusin(ev: FocusEvent) {
       flags.active = true
@@ -116,9 +118,19 @@ const definition = defineHook(
       close()
     }
 
-    function select(newItems: ItemStateful[] = [pointer.item].filter(Boolean)) {
+    async function select(
+      newItems: ItemStateful[] = [pointer.item].filter(Boolean),
+      point = false
+    ) {
       if (!newItems?.length) return
-      flags.readonly || flags.disabled || items.select(newItems)
+      const pointerPosition = point
+        ? newItems[0]?.position || -1
+        : pointer.index
+
+      await (flags.readonly || flags.disabled || items.select(newItems))
+
+      pointer.index = pointerPosition
+
       model.isMultiple || close()
       phrase.value = ''
     }
@@ -162,10 +174,12 @@ const definition = defineHook(
         ArrowDown() {
           ev.preventDefault()
           pointer.next(ev.metaKey ? Infinity : false)
+          autoscroll()
         },
         ArrowUp() {
           ev.preventDefault()
           pointer.next(ev.metaKey ? 0 : true)
+          autoscroll()
         },
         Backspace() {
           if (phrase.value.length) return
@@ -368,9 +382,12 @@ const definition = defineHook(
                 undefined,
             }),
             ref: (e: any) => (els.options[option.position] = e),
+            // onMouseenter() {
+            //   pointer.index = option.position
+            // },
             onClick: (ev: Event) => {
               ev.stopPropagation()
-              select([option])
+              select([option], true)
             },
           }
         },
