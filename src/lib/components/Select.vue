@@ -64,7 +64,7 @@ export default defineComponent({
             'vue3-select max-w-md mb-30 relative text-black text-sm',
             props.class,
           ]}
-          {...ui.attrs.root}
+          {...(ui.attrs.root as any)}
         >
           <div class="flex flex-wrap gap-1 bg-white p-1 rounded-sm">
             {service.model.value.map((e, i) => (
@@ -83,7 +83,7 @@ export default defineComponent({
               <input
                 class="px-2 h-8 border-none rounded-sm flex-1 w-full"
                 {...attrs}
-                {...ui.attrs.input}
+                {...(ui.attrs.input as any)}
               />
             </div>
             {service.phrase.typing ? (

@@ -169,6 +169,13 @@ const definition = defineHook(props, (props) => {
 
 export default definition
 
+// proxy for the declaration bellow
+type TItem = Item
+
+declare module '@/types' {
+  export interface Item extends TItem {}
+}
+
 if (import.meta.vitest) {
   const { it, test, expect, describe } = import.meta.vitest
 

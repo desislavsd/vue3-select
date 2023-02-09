@@ -14,8 +14,6 @@ export type WithoutFirstParameter<F extends Fn> = WithoutFirst<Parameters<F>>
 
 export type Fn<R = unknown> = (...args: any[]) => R
 
-export type Item = SelectService['src']['data'][number]
-
 export interface ItemStateful extends Item {
   selected: boolean
   disabled: boolean

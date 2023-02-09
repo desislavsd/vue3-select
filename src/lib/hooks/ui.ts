@@ -1,31 +1,18 @@
-import {
-  MaybeRef,
-  Item,
-  WithoutFirstParameter,
-  MaybeArray,
-  Not,
-  SelectService,
-  Fn,
-  ItemStateful,
-} from '@/types'
-import {
-  reactive,
-  unref,
-  ref,
-  watch,
-  computed,
-  onMounted,
-  toRef,
-  getCurrentInstance,
-  watchEffect,
-  PropType,
-  Ref,
-  ExtractPropTypes,
-  onBeforeUpdate,
-  nextTick,
-} from 'vue'
-import { debounce, defineHook, toPath, get, craw } from '@/utils'
 import { useIntersectionObserver } from '@/capi'
+import { Item, ItemStateful } from '@/types'
+import { defineHook } from '@/utils'
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onBeforeUpdate,
+  reactive,
+  ref,
+  toRef,
+  unref,
+  watch,
+  watchEffect,
+} from 'vue'
 
 const uiProps = {
   id: {
@@ -152,7 +139,7 @@ const definition = defineHook(
     }
 
     function blur() {
-      const focused: HTMLElement | null =
+      const focused: HTMLElement | undefined =
         els.root?.querySelector(':focus') || els.root
       focused?.blur()
     }
@@ -248,8 +235,8 @@ const definition = defineHook(
 
       useIntersectionObserver(
         reactive({
-          target: computed(() => els.options?.at(-1)),
-          root: toRef(els, 'list'),
+          target: computed(() => els.options?.at(-1)) as any,
+          root: toRef(els, 'list') as any,
           rootMargin: '50px',
           callback: ([{ isIntersecting }]) => {
             if (!isIntersecting) return
