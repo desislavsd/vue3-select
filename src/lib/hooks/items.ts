@@ -6,8 +6,10 @@ import {
   Fn,
   SelectService,
   ItemStateful,
+  MaybeRef,
 } from '@/types'
-import { reactive, unref, computed, toRef, PropType } from 'vue'
+import { reactive, unref, computed, toRef, PropType, watch, ref } from 'vue'
+
 import { defineHook, toPath, get, craw } from '@/utils'
 
 type FilterProp = boolean | string | string[] | typeof defaultFilter
@@ -102,7 +104,26 @@ export default defineHook(
 
     const value = computed(() => unref(tags).concat(unref(filtered)))
 
-    function select(items: Item[] = [service.pointer.item].filter(Boolean)) {
+    const pointer = usePointer(value)
+
+    const stateful = computed(() =>
+      unref(value).map(
+        (e, position) =>
+          new item.value({
+            ...e,
+            position,
+            selected: checkSelected(e),
+            disabled: checkDisabled(e),
+            pointed: position == unref(pointer.index),
+          }) as ItemStateful
+      )
+    )
+
+    /**
+     * Updates selection with given items
+     * with respect to their state and the `mode`
+     */
+    function select(items: ItemStateful[]) {
       items = items.filter((e) => !checkDisabled(e))
 
       if (!items.length) return
@@ -126,9 +147,13 @@ export default defineHook(
     }
 
     return reactive({
-      value,
+      value: stateful,
       flags,
       select,
+      pointer: reactive({
+        ...pointer,
+        item: computed(() => unref(stateful)[unref(pointer.index)]),
+      }),
       checkDisabled,
       checkSelected,
     })
@@ -176,4 +201,38 @@ function filterByProps(props: string[], item: Item, phrase: string) {
 
 function defaultFilter(...args: WithoutFirstParameter<typeof filterByProps>) {
   return filterByProps(['label'], ...args)
+}
+
+function usePointer(items: MaybeRef<Item[]>) {
+  const _index = ref(-1)
+
+  const index = computed({
+    get() {
+      return unref(_index)
+    },
+    set(value: number) {
+      const { min, max } = Math
+      const last = unref(items).length - 1
+      _index.value = max(min(last, value), -1)
+    },
+  })
+
+  function next(prev?: boolean | number) {
+    const { min, max } = Math
+
+    const last = unref(items).length - 1
+
+    if (typeof prev == 'undefined') prev = false
+
+    if (typeof prev == 'boolean') prev = unref(index) + (prev ? -1 : 1)
+
+    index.value = prev
+  }
+
+  watch(items, (items) => (index.value = unref(items)[0]?.new ? 0 : -1))
+
+  return {
+    index,
+    next,
+  }
 }

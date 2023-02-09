@@ -70,8 +70,10 @@ const uiProps = {
 // pagination
 const definition = defineHook(
   uiProps,
-  function (props, ctx, { phrase, src, item, items, pointer, model }) {
+  function (props, ctx, { phrase, src, item, items, model }) {
     const vm = getCurrentInstance()
+
+    const { pointer } = items
 
     const ids = computed(() => {
       const id =
@@ -102,20 +104,7 @@ const definition = defineHook(
       mode: toRef(items.flags, 'mode'),
     })
 
-    const { items: paginatedItems, scrollTo } = useInfiniteScroll()
-
-    const uiItems = computed(() =>
-      paginatedItems.value.map(
-        (e, position) =>
-          new item.value({
-            ...e,
-            position,
-            selected: items.checkSelected(e),
-            disabled: items.checkDisabled(e),
-            pointed: pointer.item?.equals(e),
-          }) as ItemStateful
-      )
-    )
+    const { items: uiItems, scrollTo } = useInfiniteScroll()
 
     const inputValue = useTypeAheadPhrase()
 
@@ -140,8 +129,9 @@ const definition = defineHook(
       close()
     }
 
-    function select(...args: ItemStateful[][]) {
-      flags.readonly || flags.disabled || items.select(...args)
+    function select(newItems: ItemStateful[] = [pointer.item].filter(Boolean)) {
+      if (!newItems?.length) return
+      flags.readonly || flags.disabled || items.select(newItems)
       model.isMultiple || close()
       phrase.value = ''
     }
@@ -177,7 +167,6 @@ const definition = defineHook(
       const handlers = {
         Escape() {
           if (!flags.opened) return blur()
-          // if (~pointer.index) return (pointer.index = -1)
           close()
         },
         Enter() {
@@ -192,20 +181,11 @@ const definition = defineHook(
           pointer.next(ev.metaKey ? 0 : true)
         },
         Backspace() {
-          // typeahead
-          // if (pointer.item && !pointer.item.new) {
-          //   return (phrase.value = (pointer.item.label as string)
-          //     .toString()
-          //     .slice(0, ev.metaKey ? 0 : -1))
-          // }
           if (phrase.value.length) return
           ev.metaKey ? model.clear() : model.pop()
         },
         default() {
           if (willTag) return
-
-          // typeahead
-          // if (pointer.item) phrase.value = pointer.item.label as string
         },
       }
 
@@ -291,10 +271,10 @@ const definition = defineHook(
         // ensure enough options are loaded
         page.value = Math.max(Math.ceil(position / props.limit), page.value)
 
-        const el = els.options?.[position],
+        const el = els.options[position],
           { list } = els
 
-        if (!list || !el) return
+        if (!list) return
 
         const to = el
           ? Math.round(el.offsetTop + el.offsetHeight - list?.offsetHeight / 2)

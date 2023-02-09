@@ -16,8 +16,6 @@ import item from '@/hooks/item'
 import src from '@/hooks/src'
 import model from '@/hooks/model'
 import items from '@/hooks/items'
-import pointer from '@/hooks/pointer'
-
 import ui from '@/hooks/ui'
 
 const map = {
@@ -27,7 +25,6 @@ const map = {
   src,
   model,
   items,
-  pointer,
   ui,
 } as const
 
@@ -53,7 +50,6 @@ declare module '@/types' {
     src: ReturnType<typeof src['hook']>
     model: ReturnType<typeof model['hook']>
     items: ReturnType<typeof items['hook']>
-    pointer: ReturnType<typeof pointer['hook']>
     ui: ReturnType<typeof ui['hook']>
     service: ShallowReactive<SelectService>
   }

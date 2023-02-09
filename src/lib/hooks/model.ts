@@ -54,15 +54,7 @@ const definition = defineHook(
         const v = proxy.value
         return [v].flat().filter(isset).map(resolve)
       },
-      set(v?: Item | Item[]) {
-        let value: MaybeArray<Item> = [v].flat().filter(isset) as Item[]
-
-        let rawValue: MaybeArray<unknown> = value.map((e) => e.value)
-
-        if (!unref(isMultiple)) rawValue = (value = value[0])?.value
-
-        proxySet.call(service, rawValue, { value, service })
-      },
+      set,
     })
 
     const poor = computed(() => model.value.some((e) => e.poor))
@@ -91,6 +83,7 @@ const definition = defineHook(
       oldValue.value.splice(0, Infinity, ...model.value)
     })
 
+    // resolve value when poor items are present
     watch(
       [poor, resolver],
       async () => {
@@ -102,8 +95,23 @@ const definition = defineHook(
       { flush: 'post', immediate: true }
     )
 
-    // appends selected option to model value
-    // no matters if it was already selected
+    /**
+     * Replace selection
+     */
+    function set(v?: Item | Item[]) {
+      let value: MaybeArray<Item> = [v].flat().filter(isset) as Item[]
+
+      let rawValue: MaybeArray<unknown> = value.map((e) => e.value)
+
+      if (!unref(isMultiple)) rawValue = (value = value[0])?.value
+
+      return proxySet.call(service, rawValue, { value, service })
+    }
+
+    /**
+     * Appends items to selection
+     * no matter if they were already selected
+     */
     function append(item: Item | Item[]) {
       // normalize to array
       item = [item].flat()
@@ -113,13 +121,9 @@ const definition = defineHook(
       model.value = model.value.concat(item)
     }
 
-    function resolve(value: unknown) {
-      const newItem = unref(item).ofValue(value)
-      return unref(index).find((e) => e.equals(newItem)) || newItem
-    }
-
-    // remove/appends option to model value
-    // depending on whether it is selected
+    /**
+     * Toggle item from selection
+     */
     function toggle(item: Item | Item[]) {
       if (!item) return
 
@@ -142,18 +146,32 @@ const definition = defineHook(
       model.value = newValue
     }
 
+    /**
+     * Remove last item from selection
+     */
     function pop() {
       model.value = model.value.slice(0, -1)
     }
 
+    /**
+     * Clear selection
+     */
     function clear() {
       model.value = []
     }
 
+    /**
+     * Remove item at given position in selection
+     */
     function remove(index: number) {
       const newValue = model.value.slice()
       newValue.splice(index, 1)
       model.value = newValue
+    }
+
+    function resolve(value: unknown) {
+      const newItem = unref(item).ofValue(value)
+      return unref(index).find((e) => e.equals(newItem)) || newItem
     }
 
     return reactive({
@@ -161,6 +179,7 @@ const definition = defineHook(
       poor,
       busy,
       isMultiple,
+      set,
       append,
       toggle,
       pop,
