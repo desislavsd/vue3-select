@@ -93,7 +93,9 @@ export default defineComponent({
             ) : (
               ''
             )}
-            {(service.model.busy || service.src.busy) && (
+            {(service.model.busy ||
+              service.model.resolving ||
+              service.src.busy) && (
               <i class="flex-shrink-0 block animate-spin h-6 w-6 grid items-center text-center">
                 🛞
               </i>

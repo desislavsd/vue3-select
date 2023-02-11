@@ -13,7 +13,9 @@ export default defineHook({}, (props, ctx, { service }) => {
 
     if (typing) return (enabled.value = false)
 
-    if (model.poor /*TODO: && autoresolve */) return (enabled.value = valid)
+    // if model value needs to be resolved & there is no resolver
+    // try to load options to resolve from them
+    if (model.poor && !service.props.resolve) return (enabled.value = valid)
 
     if (ui.flags.active) return (enabled.value = valid)
 

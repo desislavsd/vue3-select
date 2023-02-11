@@ -49,15 +49,9 @@ const uiProps = {
   },
 }
 
-// TODO:
-// or clearOn: select/blur/escape
-// or closeOn: select/blur/escape
-// highlight first
-// resolve
-// pagination
 const definition = defineHook(
   uiProps,
-  function (props, ctx, { phrase, src, item, items, model }) {
+  function (props, ctx, { phrase, src, items, model }) {
     const vm = getCurrentInstance()
 
     const { pointer } = items

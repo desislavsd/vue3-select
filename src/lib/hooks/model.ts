@@ -6,12 +6,12 @@ import {
   watchEffect,
   toRef,
   watch,
-  ref,
   shallowRef,
+  ComputedRef,
 } from 'vue'
 import { Item, MaybeArray, UpdateHandler } from '@/types'
 import { defineHook, findArray, isset } from '@/utils'
-import { useVModel } from '@/capi'
+import { useBusy, useVModel } from '@/capi'
 
 const definition = defineHook(
   {
@@ -47,6 +47,7 @@ const definition = defineHook(
     let oldValue = shallowRef<Item[]>([])
 
     const index = computed(() => unref(items).concat(unref(oldValue)))
+    const resolving = useBusy()
 
     // model value is normalized to array for unified internal usage
     const model = computed<Item[]>({
@@ -57,7 +58,7 @@ const definition = defineHook(
       set,
     })
 
-    const poor = computed(() => model.value.some((e) => e.poor))
+    const poorItems = computed(() => model.value.filter((e) => e.poor))
 
     const resolver = computed(() => {
       const { resolve } = props
@@ -66,7 +67,7 @@ const definition = defineHook(
         if (typeof resolve == 'function')
           return resolve.call(
             service,
-            model.value.filter((e) => e.poor).map((e) => e.value)
+            unref(poorItems).map((e) => e.value)
           )
         return []
       }
@@ -85,10 +86,20 @@ const definition = defineHook(
 
     // resolve value when poor items are present
     watch(
-      [poor, resolver],
+      [
+        // changes should be tracked via primitive medium
+        // therefore use stringified representation of the poor items
+        computed(() =>
+          unref(poorItems)
+            .map((e) => e.value?.toString())
+            .sort() // ensure [1,2] & [2,1] are one and the same thing to avoid unnecessary triggers
+            .join(',')
+        ),
+        resolver,
+      ],
       async () => {
-        if (!unref(poor)) return
-        const resolved = await unref(resolver)()
+        if (!unref(poorItems).length) return
+        const resolved = await (resolving.value = unref(resolver)())
         if (!resolved?.length) return
         oldValue.value = [...resolved, ...unref(oldValue)]
       },
@@ -176,7 +187,8 @@ const definition = defineHook(
 
     return reactive({
       value: model,
-      poor,
+      resolving: resolving as ComputedRef<boolean>,
+      poor: computed(() => !!unref(poorItems).length),
       busy,
       isMultiple,
       set,

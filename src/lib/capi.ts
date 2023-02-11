@@ -98,7 +98,7 @@ export function useVModel<T extends object, K extends keyof T & string>(
 export function useBusy() {
   const state = ref<undefined | Promise<unknown>>()
 
-  return computed<boolean>({
+  return computed({
     get() {
       return Boolean(state.value)
     },
