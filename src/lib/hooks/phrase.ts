@@ -44,9 +44,7 @@ export default defineHook(
     },
   },
   (props, ctx, { service }) => {
-    const { proxy, set, busy } = useVModel(props, 'phrase', {
-      defaultValue: '',
-    })
+    const { proxy, set, busy } = useVModel(props, 'phrase')
 
     const value = computed({
       get() {

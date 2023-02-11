@@ -20,7 +20,7 @@ const definition = defineHook(
       default: undefined,
     },
     modelValue: {},
-    'onUpdate:modelValue': [Function] as PropType<
+    'onUpdate:modelValue': {} as PropType<
       UpdateHandler<Item['value'], { value: MaybeArray<Item> }>
     >,
     /**

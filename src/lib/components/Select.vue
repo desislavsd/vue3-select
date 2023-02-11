@@ -79,7 +79,7 @@ export default defineComponent({
                 {slots.both?.({ item: e, index: i }) || e.label}
               </span>
             ))}
-            <div class="relative flex-1">
+            <div class="relative flex-1 min-w-30">
               <input
                 class="px-2 h-8 border-none rounded-sm flex-1 w-full"
                 {...attrs}

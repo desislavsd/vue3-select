@@ -51,10 +51,7 @@ type oo = {} extends object ? true : false
 
 export function useVModel<T extends object, K extends keyof T & string>(
   props: T,
-  prop: K,
-  { defaultValue } = {
-    defaultValue: undefined as T[K],
-  }
+  prop: K
 ) {
   const busy = useBusy()
 
@@ -64,7 +61,13 @@ export function useVModel<T extends object, K extends keyof T & string>(
 
   const mustProxy = computed(() => !isset(props[unref(updateKey)]))
 
-  const proxy = ref(unref(propValue) ?? defaultValue) as Ref<T[K]>
+  const proxy = ref(unref(propValue)) as Ref<T[K]>
+
+  const setters = computed(() =>
+    [props[unref(updateKey)], (value: T[K]) => (proxy.value = value)]
+      .flat()
+      .filter(Boolean)
+  )
 
   watch(propValue, (value) => (proxy.value = value))
 
@@ -78,14 +81,10 @@ export function useVModel<T extends object, K extends keyof T & string>(
   async function set(value: T[K], ...args: unknown[]) {
     if (unref(busy)) return
 
-    const promise = unref(mustProxy)
-      ? (proxy.value = value)
-      : // @ts-ignore
-        props[unref(updateKey)]?.call?.(this, value, ...args)
-
-    busy.value = promise
-
-    return await promise
+    return (busy.value = Promise.all(
+      // @ts-ignore
+      unref(setters).map((set) => set?.apply(this, arguments))
+    ))
   }
 
   return {
