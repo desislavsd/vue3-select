@@ -19,13 +19,26 @@ export function useAsyncData(
 
   const state = ref({ ...defaults })
 
+  const id = computed(() => JSON.stringify(unref(key).map(unref)))
+
   function refresh() {
-    state.value = {
+    let localState = state.value
+
+    // check if same request is already pending
+    if (localState.id == unref(id) && (localState.data || localState.busy))
+      return
+
+    // proceend only if enabled or cleanup is needed
+    if (!localState.data && !localState.busy && !opts.enabled) return
+
+    // direct assignment won't work as it doesnt return the reactive object
+    /* localState = */ state.value = {
       ...defaults,
-      id: JSON.stringify(unref(key).map(unref)),
-      busy: true,
+      id: unref(id),
+      busy: opts.enabled,
     }
-    const localState = state.value
+
+    localState = state.value
 
     Promise.resolve(opts.enabled ? unref(fetcher)(unref(key)) : null)
       .then((data) => Object.assign(localState, { data }))
@@ -33,16 +46,12 @@ export function useAsyncData(
       .finally(() => Object.assign(localState, { busy: false }))
   }
 
-  watch([fetcher, key, opts], refresh, {
-    immediate: true,
-    deep: true,
-    flush: 'post',
-  })
+  watch([id, opts], refresh, { immediate: true })
 
   return {
-    ...(mapObj(defaults, (name) =>
-      computed(() => unref(state)[name])
-    ) as unknown as typeof defaults),
+    data: computed(() => unref(state).data),
+    error: computed(() => unref(state).error),
+    busy: computed(() => unref(state).busy),
     refresh,
   }
 }

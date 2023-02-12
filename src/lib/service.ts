@@ -1,16 +1,8 @@
-import {
-  SetupContext,
-  reactive,
-  ref,
-  Ref,
-  shallowReactive,
-  ShallowReactive,
-} from 'vue'
+import { SetupContext, reactive, shallowReactive, ShallowReactive } from 'vue'
 import { SelectService, Config, UnionToIntersection, Fn } from '@/types'
 import { extractDefaults, isPrimitive, toRefsSafe } from '@/utils'
 
 // hooks
-import enabled from '@/hooks/enabled'
 import phrase from '@/hooks/phrase'
 import item from '@/hooks/item'
 import src from '@/hooks/src'
@@ -19,7 +11,6 @@ import items from '@/hooks/items'
 import ui from '@/hooks/ui'
 
 const map = {
-  enabled,
   phrase,
   item,
   src,
@@ -44,7 +35,6 @@ declare module '@/types' {
     context: Partial<SetupContext>
     defaults: Config
 
-    enabled: ReturnType<typeof enabled['hook']>
     phrase: ReturnType<typeof phrase['hook']>
     item: ReturnType<typeof item['hook']>
     src: ReturnType<typeof src['hook']>
@@ -93,7 +83,7 @@ function buildService(props: Config, context: Partial<SetupContext>) {
     props,
     context,
     defaults,
-  } as SelectService)
+  }) as SelectService
 
   service.service = service
 

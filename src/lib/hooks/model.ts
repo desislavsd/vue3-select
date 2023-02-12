@@ -103,7 +103,7 @@ const definition = defineHook(
         if (!resolved?.length) return
         oldValue.value = [...resolved, ...unref(oldValue)]
       },
-      { flush: 'post', immediate: true }
+      { immediate: true }
     )
 
     /**

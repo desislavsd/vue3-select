@@ -101,8 +101,13 @@ export default defineHook(
     })
 
     const tags = computed(() => {
-      // TODO: add check if tagging is enabled
-      if (!props.tagging || !src.data || !phrase.value) return []
+      if (
+        !props.tagging ||
+        !phrase.value ||
+        src.busy ||
+        (src.dynamic && phrase.typing)
+      )
+        return []
 
       const tag = unref(item).ofPhrase(phrase.value)
 

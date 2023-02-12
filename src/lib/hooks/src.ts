@@ -1,4 +1,12 @@
-import { computed, watch, unref, reactive, PropType, shallowRef } from 'vue'
+import {
+  computed,
+  watch,
+  unref,
+  reactive,
+  PropType,
+  shallowRef,
+  toRef,
+} from 'vue'
 import { fetch_, defineHook, get, toPath, findArray } from '@/utils'
 import { useAsyncData } from '@/capi'
 import { Fn, SelectService, Item, MaybeArray } from '@/types'
@@ -41,7 +49,7 @@ const definition = defineHook(
       default: () => useSrc,
     },
   },
-  function (props, context, { phrase, service, item, enabled }) {
+  function (props, context, { phrase, service, item }) {
     const added = shallowRef<Item[]>([])
 
     watch(
@@ -50,8 +58,10 @@ const definition = defineHook(
       { immediate: true, flush: 'pre' }
     )
 
+    const enabled = useEnabled(service)
+
     const opts = reactive({
-      enabled: computed(() => enabled.value),
+      enabled,
     })
 
     const params = reactive({
@@ -91,6 +101,7 @@ const definition = defineHook(
     return reactive({
       ...res,
       data: parsed,
+      enabled,
       pushTags,
     })
   }
@@ -109,21 +120,50 @@ function useSrc(
 
   const dynamic = computed(() => isSrcDynamic(props.src))
 
-  const key = computed(() => (unref(dynamic) ? [params] : []))
-
   const fetcher = computed(() => {
     // make sure this computed knows it depends on fetcher & src
     const { fetcher, src } = props
 
-    return (k: typeof key) =>
-      fetcher.call(this, unref(k).at(-1) || { phrase: '' })
+    return (k: any) => fetcher.call(this, unref(k).at(-1) || { phrase: '' })
   })
+
+  const srcKey = computed(() => {
+    return unref(fetcher), Math.random().toString(32).slice(2)
+  })
+
+  const key = computed(() => [
+    unref(srcKey),
+    ...(unref(dynamic) ? [params] : []),
+  ])
 
   return {
     async,
     dynamic,
     ...useAsyncData(key, fetcher, opts),
   }
+}
+
+/**
+ * flag whether options should be fetched
+ */
+function useEnabled(service: SelectService) {
+  return computed(() => {
+    if (!unref(service.ready)) return false
+
+    const { ui, model, phrase } = service
+
+    const { valid, typing } = phrase
+
+    if (typing) return false
+
+    // if model value needs to be resolved & there is no resolver
+    // try to load options to resolve from them
+    if (model.poor && !service.props.resolve) return valid
+
+    if (ui.flags.active) return valid
+
+    return false
+  })
 }
 
 // check weather options depend on the query
