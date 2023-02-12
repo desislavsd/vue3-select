@@ -47,8 +47,6 @@ export function useAsyncData(
   }
 }
 
-type oo = {} extends object ? true : false
-
 export function useVModel<T extends object, K extends keyof T & string>(
   props: T,
   prop: K

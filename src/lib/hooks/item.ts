@@ -36,13 +36,17 @@ class Item {
    */
   raw: unknown
   /**
+   * If its created from insufficient data
+   */
+  poor?: boolean
+  /**
    * If its created via tagging from phrase
    */
   new?: boolean
   /**
-   * If its created from insufficient data
+   * If its created via tagging and is added to the options list
    */
-  poor?: boolean
+  added?: boolean
 
   constructor(data?: unknown) {
     Object.assign(this, data /* , { state: {} } */)

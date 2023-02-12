@@ -1,7 +1,7 @@
-import { computed, toRefs, unref, reactive, PropType, toRef } from 'vue'
+import { computed, watch, unref, reactive, PropType, shallowRef } from 'vue'
 import { fetch_, defineHook, get, toPath, findArray } from '@/utils'
 import { useAsyncData } from '@/capi'
-import { Fn, SelectService } from '@/types'
+import { Fn, SelectService, Item, MaybeArray } from '@/types'
 
 type TParams = { phrase: string; page?: number }
 type TOpts = { enabled: boolean }
@@ -42,6 +42,14 @@ const definition = defineHook(
     },
   },
   function (props, context, { phrase, service, item, enabled }) {
+    const added = shallowRef<Item[]>([])
+
+    watch(
+      () => props.src,
+      () => (added.value = []),
+      { immediate: true, flush: 'pre' }
+    )
+
     const opts = reactive({
       enabled: computed(() => enabled.value),
     })
@@ -54,15 +62,36 @@ const definition = defineHook(
 
     const parse = computed(() => normalizeParse(props.parse))
 
-    const parsed = computed(() =>
-      (unref(parse)(unref(res.data) || []) as unknown[]).map((e) =>
-        unref(item).ofRaw(e)
+    const parsed = computed(() => {
+      const parsed = (unref(parse)(unref(res.data) || []) as unknown[]).map(
+        (e) => unref(item).ofRaw(e)
       )
-    )
+      return unref(added).concat(parsed)
+    })
+
+    /**
+     * Adds options to the list dynamically;
+     * Skips already existing ones
+     */
+    function pushTags(v: MaybeArray<unknown>): void {
+      if (!v) return
+
+      if (Array.isArray(v)) return v.forEach(pushTags)
+
+      if (!(v instanceof unref(item))) return pushTags(unref(item).ofRaw(v))
+
+      if (unref(parsed).some((e) => e.equals(v))) return
+
+      added.value = [
+        ...unref(added),
+        new item.value({ ...v, added: true }) as Item,
+      ]
+    }
 
     return reactive({
       ...res,
       data: parsed,
+      pushTags,
     })
   }
 )

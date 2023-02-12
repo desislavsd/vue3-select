@@ -21,7 +21,7 @@ const definition = defineHook(
     },
     modelValue: {},
     'onUpdate:modelValue': {} as PropType<
-      UpdateHandler<Item['value'], { value: MaybeArray<Item> }>
+      UpdateHandler<Item['value'], { value: Item[] }>
     >,
     /**
      * Help resolve corresponding raw options from option values;
@@ -114,7 +114,7 @@ const definition = defineHook(
 
       let rawValue: MaybeArray<unknown> = value.map((e) => e.value)
 
-      if (!unref(isMultiple)) rawValue = (value = value[0])?.value
+      if (!unref(isMultiple)) rawValue = value.at(-1)?.value // covers append mode
 
       return proxySet.call(service, rawValue, { value, service })
     }
@@ -126,8 +126,6 @@ const definition = defineHook(
     function append(item: Item | Item[]) {
       // normalize to array
       item = [item].flat()
-
-      if (!unref(isMultiple)) return (model.value = item)
 
       model.value = model.value.concat(item)
     }

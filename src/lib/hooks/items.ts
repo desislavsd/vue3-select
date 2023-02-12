@@ -8,7 +8,16 @@ import {
   ItemStateful,
   MaybeRef,
 } from '@/types'
-import { reactive, unref, computed, toRef, PropType, watch, ref } from 'vue'
+import {
+  reactive,
+  unref,
+  computed,
+  toRef,
+  PropType,
+  watch,
+  ref,
+  shallowRef,
+} from 'vue'
 
 import { defineHook, toPath, get, craw } from '@/utils'
 
@@ -149,11 +158,11 @@ export default defineHook(
     return reactive({
       value: stateful,
       flags,
-      select,
       pointer: reactive({
         ...pointer,
         item: computed(() => unref(stateful)[unref(pointer.index)]),
       }),
+      select,
       checkDisabled,
       checkSelected,
     })

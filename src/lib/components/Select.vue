@@ -50,7 +50,7 @@ export default defineComponent({
                   {ui.flags.mode == 'toggle' ? '❌' : '✔️'}
                 </span>
               )}
-              {e.new && (
+              {e.new && !e.added && (
                 <span class="text-xs opacity-30 ml-auto italic">create</span>
               )}
             </li>
