@@ -262,9 +262,15 @@ const definition = defineHook(
         })
       )
 
-      function scrollTo(position: number) {
+      async function scrollTo(position: number) {
+        position = Math.max(0, Math.min(position, items.value.length - 1))
+
         // ensure enough options are loaded
         page.value = Math.max(Math.ceil(position / props.limit), page.value)
+
+        // await for the ui to update & the options to be gemerated
+        // this is only needed if the page has changed but it doesnt hurt
+        await nextTick()
 
         const el = els.options[position],
           { list } = els

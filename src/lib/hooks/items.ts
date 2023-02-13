@@ -231,16 +231,17 @@ function usePointer(items: MaybeRef<Item[]>) {
     },
   })
 
-  function next(prev?: boolean | number) {
-    const { min, max } = Math
-
+  /**
+   * `true` -> previous item;
+   * `false` -> next item;
+   * `number` -> exact item;
+   */
+  function next(to: boolean | number = false): void {
     const last = unref(items).length - 1
 
-    if (typeof prev == 'undefined') prev = false
+    if (typeof to == 'boolean') to = unref(index) + (to ? -1 : 1)
 
-    if (typeof prev == 'boolean') prev = unref(index) + (prev ? -1 : 1)
-
-    index.value = prev
+    index.value = to
   }
 
   watch(items, (items) => (index.value = unref(items)[0]?.new ? 0 : -1))

@@ -174,3 +174,7 @@ export function findArray(thing) {
 
   return Object.values(thing).find(Array.isArray) || []
 }
+
+export function sleep(t = 0) {
+  return new Promise((rs) => setTimeout(rs, t))
+}
