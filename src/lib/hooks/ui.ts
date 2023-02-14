@@ -206,17 +206,35 @@ const definition = defineHook(
         },
       })
 
+      const shouldTypeahead = computed(
+        () =>
+          props.typeahead &&
+          flags.opened &&
+          !pointer.item?.new &&
+          pointer.item?.label
+      )
+
       // proxy to the local phrase value that
       const proxy = computed({
         get() {
-          if (!props.typeahead) return unref(value)
-
-          return ((flags.opened && !pointer.item?.new && pointer.item?.label) ||
-            unref(value)) as string
+          return unref(shouldTypeahead) || (unref(value) as string)
         },
         set(v: string) {
           value.value = v
         },
+      })
+
+      // Selects the part of the phrase in the input field that is suggested but not written but the user
+      watch(proxy, async () => {
+        let str = unref(shouldTypeahead) as string
+
+        if (!str) return
+
+        let i = str.startsWith(unref(value)) ? unref(value).length : 0
+
+        await nextTick()
+
+        els.input?.setSelectionRange?.(i, str.length)
       })
 
       return proxy
@@ -235,7 +253,10 @@ const definition = defineHook(
 
       watch(
         [toRef(phrase, 'value'), toRef(src, 'data')],
-        () => (page.value = 1),
+        () => {
+          page.value = 1
+          scrollTo(0)
+        },
         { flush: 'pre' }
       )
 
