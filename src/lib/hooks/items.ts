@@ -36,10 +36,14 @@ const props = {
   },
   /**
    * Strategy on handling selected options:
-   * skip - they won't appear in dropdown
-   * append - allows selecting same option multiple times
-   * toggle - selecting selected option will deselect it
-   * disable - selected options appear in dropdown but can't be selected anymore;
+   *
+   * `'skip'` - they won't appear in dropdown
+   *
+   * `'append'` - allows selecting same option multiple times
+   *
+   * `'toggle'` - selecting selected option will deselect it
+   *
+   * `'disable'` - selected options appear in dropdown but can't be selected anymore;
    */
   mode: {
     type: String as PropType<'skip' | 'append' | 'toggle' | 'disable'>,
@@ -50,6 +54,16 @@ const props = {
    */
   disable: {
     type: Function as PropType<(this: SelectService, item: Item) => boolean>,
+  },
+
+  /**
+   * Automatically point the first option in the list;
+   *
+   * _Notice: leads to bad UX when used alongside typeahead_
+   */
+  autopoint: {
+    type: Boolean,
+    default: undefined,
   },
 }
 
@@ -118,7 +132,7 @@ export default defineHook(
 
     const value = computed(() => unref(tags).concat(unref(filtered)))
 
-    const pointer = usePointer(value)
+    const pointer = usePointer(value, props)
 
     const stateful = computed(() =>
       unref(value).map(
@@ -217,7 +231,7 @@ function defaultFilter(...args: WithoutFirstParameter<typeof filterByProps>) {
   return filterByProps(['label'], ...args)
 }
 
-function usePointer(items: MaybeRef<Item[]>) {
+function usePointer(items: MaybeRef<Item[]>, props: { autopoint?: boolean }) {
   const _index = ref(-1)
 
   const index = computed({
@@ -244,7 +258,10 @@ function usePointer(items: MaybeRef<Item[]>) {
     index.value = to
   }
 
-  watch(items, (items) => (index.value = unref(items)[0]?.new ? 0 : -1))
+  watch(
+    items,
+    (items) => (index.value = unref(items)[0]?.new || props.autopoint ? 0 : -1)
+  )
 
   return {
     index,

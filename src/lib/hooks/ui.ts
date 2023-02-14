@@ -11,7 +11,6 @@ import {
   toRef,
   unref,
   watch,
-  watchEffect,
 } from 'vue'
 
 const uiProps = {
@@ -137,7 +136,6 @@ const definition = defineHook(
     function close() {
       if (!flags.opened) return
       flags.opened = false
-      pointer.index = -1
     }
 
     function focus() {
