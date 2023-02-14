@@ -100,6 +100,9 @@ export default defineComponent({
                 🛞
               </i>
             )}
+            <span
+              class={`h-2 w-2 ${service.src.enabled ? 'bg-green' : 'bg-red'}`}
+            ></span>
           </div>
           {list}
         </div>

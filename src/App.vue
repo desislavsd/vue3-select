@@ -54,8 +54,8 @@ const modes = ['skip', 'append', 'toggle', 'disable'] as const
 
 const common = reactive({
   mode: modes[2],
-  typeahead: false,
-  tagging: true,
+  typeahead: true,
+  tagging: false,
   accessible: false,
   readonly: false,
   disabled: false,
@@ -63,7 +63,7 @@ const common = reactive({
   autoscroll: true,
 })
 
-const opts = {
+const opts = reactive({
   'Dynamic src': {
     modelValue: ref([]),
     as: 'name.first::id',
@@ -73,7 +73,7 @@ const opts = {
   'Static src': {
     modelValue: ref([2]),
     as: 'name.first:id:id',
-    src: computed(() => spam.items),
+    src: items,
     filter: 'name',
     // disable: (e) => !Boolean(e.index % 3),
   },
@@ -91,7 +91,7 @@ const opts = {
       )
     },
   },
-}
+})
 
 function githubModel(raw, value) {
   // console.log({ raw, value }, arguments.length)
@@ -144,7 +144,7 @@ async function dynamicSrc({ phrase: query }: { phrase: string }) {
     setTimeout(() => {
       1 || Math.round(Math.random()) > 0
         ? rs(
-            items.filter(
+            items.value.filter(
               (e) =>
                 !query ||
                 JSON.stringify(e.name)
@@ -166,7 +166,6 @@ async function dynamicSrc({ phrase: query }: { phrase: string }) {
         v-bind="{ ...common, ...opt }"
         @update:model-value="lazyUpdate"
         :model-value="opt.modelValue"
-        :src="items"
       >
         <template v-if="opt?.src?.includes?.('github')" #both="{ item }">
           <img
