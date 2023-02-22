@@ -85,6 +85,8 @@ export function me() {
   return arguments[0]
 }
 
+export function noop() {}
+
 export function defaultsToProps<T extends object>(defaults: T) {
   return Object.fromEntries(
     Object.entries(defaults).map(([key, val]) => [

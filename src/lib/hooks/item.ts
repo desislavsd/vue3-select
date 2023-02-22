@@ -1,6 +1,6 @@
-import { MaybeRef, Not } from '@/types'
+import { ItemGroup, ItemGroupStateful, ItemState, MaybeRef } from '@/types'
 import { computed, unref, PropType, toRef } from 'vue'
-import { getSet, toPath, defineHook } from '../utils'
+import { getSet, toPath, defineHook, noop } from '@/utils'
 
 const ERRORS = {
   EXPECT_NONPRIMITIVE:
@@ -16,7 +16,8 @@ const props = {
 
 export const spec = {
   rx: ':', // /[^\w.]+/g,
-  order: ['label', 'value', 'index'] as const,
+  order: ['label', 'value', 'index', 'group'] as const,
+  defaults: [undefined, undefined, undefined, noop],
 }
 class Item {
   /**
@@ -36,6 +37,10 @@ class Item {
    */
   raw: unknown
   /**
+   * The calculated groupName
+   */
+  group: string | undefined
+  /**
    * If its created from insufficient data
    */
   poor?: boolean
@@ -52,7 +57,7 @@ class Item {
     Object.assign(this, data /* , { state: {} } */)
   }
 
-  static as: ReturnType<typeof useAs>['value']
+  static as: ReturnType<typeof useAs>['value'] = useAs().value
 
   static ofRaw(raw: unknown, opts?: Record<string, any>) {
     const { as } = this
@@ -99,15 +104,18 @@ class Item {
 
     const raw = {}
 
-    // spec.order.forEach((key) => key != 'index' && as[key]?.(raw, phrase))
     as.label?.(raw, phrase)
-    // as.value?.(raw, phrase)
 
     return this.ofRaw(raw, { poor: as.poor, new: true })
   }
 
-  // TODO: support non primitive comparisons
+  static mkGroup(name: string, items?: Item[]) {
+    const raw = Item.ofRaw(name)
+    raw.value = items || []
+    return raw as ItemGroup
+  }
 
+  // TODO: support non primitive comparisons
   /**
    * Comparison by index
    */
@@ -125,6 +133,20 @@ class Item {
       item.label?.toString()?.toLowerCase() ===
       this.label?.toString()?.toLowerCase()
     )
+  }
+
+  isGroup(): this is this extends ItemState ? ItemGroupStateful : ItemGroup {
+    return Boolean(
+      (this.constructor as typeof Item).as.primitive &&
+        Array.isArray(this.value)
+    )
+  }
+
+  clone<T extends object>(extend?: T): this & T {
+    return Object.assign(
+      new (this.constructor as typeof Item)(this),
+      extend
+    ) as any
   }
 }
 
@@ -144,7 +166,7 @@ function useAs(asProp: MaybeRef<AsType> = []) {
           : as[i]
           ? // @ts-ignore
             getSet.bind(null, toPath(as[i]))
-          : undefined,
+          : spec.defaults[i],
       ])
     ) as Record<
       typeof spec.order[number],

@@ -5,21 +5,12 @@ import {
   Not,
   Fn,
   SelectService,
-  ItemStateful,
   MaybeRef,
+  ItemState,
 } from '@/types'
-import {
-  reactive,
-  unref,
-  computed,
-  toRef,
-  PropType,
-  watch,
-  ref,
-  shallowRef,
-} from 'vue'
+import { reactive, unref, computed, toRef, PropType, watch, ref } from 'vue'
 
-import { defineHook, toPath, get, craw } from '@/utils'
+import { defineHook, toPath, get, craw, isset } from '@/utils'
 
 type FilterProp = boolean | string | string[] | typeof defaultFilter
 
@@ -97,7 +88,7 @@ export default defineHook(
           // dynamic items are filtered serverside
           return false
 
-      return normalizeFilter(props.filter)
+      return normalizeFilterWithGroupSupp(props.filter)
     })
 
     const moded = computed(() => {
@@ -106,12 +97,31 @@ export default defineHook(
         : unref(items)
     })
 
+    // TODO: filter by group too;
     const filtered = computed(() => {
       if (!phrase.value || !unref(filter)) return unref(moded)
 
       return unref(moded).filter((item) =>
         (unref(filter) as Fn<boolean>)(item, phrase.value)
       )
+    })
+
+    const grouped = computed(() => {
+      const items = unref(filtered)
+      // use src.data to preserve groups order despite filtering
+      const groupNames = [...new Set(src.data.map((e) => e.group))].filter(
+        isset
+      ) as string[]
+
+      return groupNames.length
+        ? groupNames
+            .map((gr) => {
+              const groupItems = items.filter((e) => e.group == gr)
+              const group = item.value.mkGroup(gr, groupItems)
+              return groupItems.length ? [group, ...groupItems] : []
+            })
+            .flat()
+        : items
     })
 
     const tags = computed(() => {
@@ -130,20 +140,18 @@ export default defineHook(
       return [tag]
     })
 
-    const value = computed(() => unref(tags).concat(unref(filtered)))
+    const value = computed(() => unref(tags).concat(unref(grouped)))
 
     const pointer = usePointer(value, props)
 
     const stateful = computed(() =>
-      unref(value).map(
-        (e, position) =>
-          new item.value({
-            ...e,
-            position,
-            selected: checkSelected(e),
-            disabled: checkDisabled(e),
-            pointed: position == unref(pointer.index),
-          }) as ItemStateful
+      unref(value).map((e, position) =>
+        e.clone({
+          position,
+          selected: checkSelected(e),
+          disabled: checkDisabled(e),
+          pointed: position == unref(pointer.index),
+        } as ItemState)
       )
     )
 
@@ -151,7 +159,16 @@ export default defineHook(
      * Updates selection with given items
      * with respect to their state and the `mode`
      */
-    function select(items: ItemStateful[]) {
+    function select(items: Item[]) {
+      items = items
+        .map((item) => {
+          if (!item.isGroup()) return item
+          return checkSelected(item)
+            ? item.value
+            : item.value.filter((e) => !checkSelected(e))
+        })
+        .flat()
+
       items = items.filter((e) => !checkDisabled(e))
 
       if (!items.length) return
@@ -163,11 +180,16 @@ export default defineHook(
         : model.append(items)
     }
 
-    function checkSelected(item: Item) {
+    function checkSelected(item: Item): boolean {
+      if (item.isGroup())
+        return !!item.value.length && item.value.every(checkSelected)
       return model.value.some((s) => s.equals(item))
     }
 
-    function checkDisabled(item: Item) {
+    function checkDisabled(item: Item): boolean {
+      if (item.isGroup())
+        return !!item.value.length && item.value.every(checkDisabled)
+
       return Boolean(
         props.disable?.call(service, item) ||
           (props.mode == 'disable' && checkSelected(item))
@@ -200,6 +222,14 @@ function normalizeFilter(filter?: FilterProp) {
     )
 
   return filterByProps.bind(null, ['label'])
+}
+
+function normalizeFilterWithGroupSupp(filter?: FilterProp) {
+  const groupFilter = filterByProps.bind(null, ['group'])
+  const normalized = normalizeFilter(filter)
+
+  return (...args: Parameters<typeof defaultFilter>) =>
+    groupFilter(...args) || normalized(...args)
 }
 
 function filterByProps(props: string[], item: Item, phrase: string) {

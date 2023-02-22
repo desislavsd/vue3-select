@@ -14,12 +14,20 @@ export type WithoutFirstParameter<F extends Fn> = WithoutFirst<Parameters<F>>
 
 export type Fn<R = unknown> = (...args: any[]) => R
 
-export interface ItemStateful extends Item {
+export interface ItemState {
   selected: boolean
   disabled: boolean
   pointed: boolean
   position: number
 }
+
+export interface ItemStateful extends Item, ItemState {}
+
+export interface ItemGroup extends Item {
+  value: Item[]
+}
+
+export interface ItemGroupStateful extends ItemGroup, ItemState {}
 
 export type UpdateHandler<TValue = unknown, TContext extends object = {}> = (
   this: SelectService,

@@ -1,6 +1,7 @@
 <script lang="tsx">
 import { defineComponent, getCurrentInstance } from 'vue'
 import { set } from '@/utils'
+import { Item } from '@/types'
 import { useVModel } from '@/capi'
 export const test = defineComponent({
   props: {
@@ -30,7 +31,7 @@ import VueSelect from '@/components/Select.vue'
 const spam = reactive({
   number: 1,
   string: 'string',
-  count: 200,
+  count: 20,
 })
 
 const items = computed(
@@ -38,6 +39,9 @@ const items = computed(
     Array.from({ length: spam.count }, (e, i) => ({
       id: i + 1,
       name: { first: `Item ${i + 1}` },
+      // group: Math.ceil((i + 1) % 10),
+      // group: `Group ${Math.ceil((i + 1) % 10)}`,
+      group: `Group ${~~(Math.random() * 5)}`,
     })) || [
       { id: 1, name: { first: 'Deso', last: 'Stiliyanov' } },
       { id: 2, name: { first: 'Ili', last: 'Nikolaeva' } },
@@ -54,12 +58,12 @@ const modes = ['skip', 'append', 'toggle', 'disable'] as const
 
 const common = reactive({
   mode: modes[2],
-  typeahead: true,
+  typeahead: false,
   tagging: false,
   accessible: false,
   readonly: false,
   disabled: false,
-  autopoint: false,
+  autopoint: true,
   autoscroll: true,
 })
 
@@ -71,10 +75,19 @@ const opts = reactive({
     minlength: 3,
   },
   'Static src': {
-    modelValue: ref([2]),
-    as: 'name.first:id:id',
+    modelValue: ref([]),
+    as: [
+      'name.first',
+      'id',
+      'id',
+      'group',
+      // function (item: Item) {
+      //   console.log(item)
+      //   return `Group ${123}`
+      // },
+    ],
     src: items,
-    filter: 'name',
+    // filter: 'name',
     // disable: (e) => !Boolean(e.index % 3),
   },
   GitHub: {

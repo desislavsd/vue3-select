@@ -217,7 +217,10 @@ const definition = defineHook(
       // proxy to the local phrase value that
       const proxy = computed({
         get() {
-          return unref(shouldTypeahead) || (unref(value) as string)
+          return (
+            (unref(shouldTypeahead) as false | string) ||
+            (unref(value) as string)
+          )
         },
         set(v: string) {
           value.value = v
@@ -234,6 +237,7 @@ const definition = defineHook(
 
         await nextTick()
 
+        // @ts-ignore
         els.input?.setSelectionRange?.(i, str.length)
       })
 

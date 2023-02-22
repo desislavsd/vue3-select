@@ -28,7 +28,7 @@ export default defineComponent({
       const list = !ui.flags.readonly && !ui.flags.disabled && (
         <ul
           class={[
-            'bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md overflow-auto max-h-30',
+            'bg-white list-none p-0 m-0 absolute top-full w-full mt-2 overflow-auto rounded-sm shadow-md overflow-auto max-h-60',
             ui.flags.opened || 'hidden',
           ]}
           {...ui.attrs.list}
@@ -39,6 +39,7 @@ export default defineComponent({
                 `h-7 flex items-center m-0 px-2 cursor-pointer`,
                 e.pointed && 'bg-gray-200',
                 e.disabled ? 'opacity-40' : 'hover:bg-gray-300',
+                e.isGroup() && 'font-bold',
               ]}
               {...ui.attrs.option(e)}
             >
@@ -50,7 +51,7 @@ export default defineComponent({
                   {ui.flags.mode == 'toggle' ? '❌' : '✔️'}
                 </span>
               )}
-              {e.new && !e.added && (
+              {!e.isGroup() && e.new && !e.added && (
                 <span class="text-xs opacity-30 ml-auto italic">create</span>
               )}
             </li>
@@ -146,6 +147,15 @@ export default defineComponent({
   }
   100% {
     scale: 1;
+  }
+}
+
+@keyframes clip-in {
+  0% {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+  }
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
 }
 </style>
