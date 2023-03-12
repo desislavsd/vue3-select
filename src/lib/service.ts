@@ -1,4 +1,12 @@
-import { SetupContext, reactive, shallowReactive, ShallowReactive } from 'vue'
+import {
+  SetupContext,
+  reactive,
+  shallowReactive,
+  ShallowReactive,
+  InjectionKey,
+  inject,
+  provide,
+} from 'vue'
 import { SelectService, Config, UnionToIntersection, Fn } from '@/types'
 import { extractDefaults, isPrimitive, toRefsSafe } from '@/utils'
 
@@ -9,6 +17,8 @@ import src from '@/hooks/src'
 import model from '@/hooks/model'
 import items from '@/hooks/items'
 import ui from '@/hooks/ui'
+
+const symbol: InjectionKey<SelectService> = Symbol('selectService')
 
 const map = {
   phrase,
@@ -48,21 +58,30 @@ declare module '@/types' {
 export default useService
 
 export function useService(
-  options: Partial<Config> | Config,
-  context: Partial<SetupContext> = {}
+  options: (Partial<Config> | Config) & { service?: SelectService } = {},
+  context: Partial<SetupContext> = {},
+  forceNew: boolean = false
 ) {
-  // if(/* typeof options extends Config  */) return buildService(localProps, context)
+  let service = forceNew ? null : options.service || inject(symbol, null)
 
-  // extract actual config from props
-  const config = extractDefaults(props, true) as Config
+  if (!service) {
+    // if(/* typeof options extends Config  */) return buildService(localProps, context)
 
-  // merge config & options
-  const localProps = reactive({
-    ...config,
-    ...toRefsSafe(options),
-  }) as Config
+    // extract actual config from props
+    const config = extractDefaults(props, true) as Config
 
-  return buildService(localProps, context)
+    // merge config & options
+    const localProps = reactive({
+      ...config,
+      ...toRefsSafe(options),
+    }) as Config
+
+    service = buildService(localProps, context)
+  }
+
+  provide(symbol, service)
+
+  return service
 }
 
 export function defineConfig<T extends Partial<Config>>(config: T): T {
@@ -76,8 +95,6 @@ export function defineConfig<T extends Partial<Config>>(config: T): T {
 }
 
 function buildService(props: Config, context: Partial<SetupContext>) {
-  const hooks: Fn[] = []
-
   const service = shallowReactive({
     ready: false,
     props,

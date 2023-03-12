@@ -414,6 +414,28 @@ const definition = defineHook(
             },
           }
         },
+        selected(option: Item, index: number) {
+          return {
+            ...(props.accessible && {
+              'aria-disabled': props.disabled || props.readonly || undefined,
+            }),
+            onClick: (ev: Event) => {
+              flags.readonly || flags.disabled || model.remove(index)
+            },
+          }
+        },
+        toggle: {
+          onClick(ev: MouseEvent) {
+            ev.stopPropagation()
+            flags.opened ? close() : open()
+          },
+        },
+        clear: {
+          onClick(ev: MouseEvent) {
+            ev.stopPropagation()
+            model.clear()
+          },
+        },
       },
       select,
       open,

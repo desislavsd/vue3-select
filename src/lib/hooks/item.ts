@@ -65,11 +65,7 @@ class Item {
     const data = spec.order.reduce(
       (m, e) => ({
         ...m,
-        [e]: as.primitive
-          ? raw
-          : typeof as[e] == 'function'
-          ? as[e]?.(raw as object)
-          : raw,
+        [e]: typeof as[e] == 'function' ? as[e]?.(raw as object) : raw,
       }),
       { raw }
     ) as Item
@@ -152,11 +148,11 @@ class Item {
 
 function useAs(asProp: MaybeRef<AsType> = []) {
   return computed(() => {
-    let as = unref(asProp) as any
+    let as = (unref(asProp) as any) || []
 
     if (typeof as == 'string') as = as.split(spec.rx)
 
-    const primitive = !unref(as)?.length
+    const primitive = !unref(as)?.slice?.(0, 3).filter(Boolean).length
 
     let models = Object.fromEntries(
       spec.order.map((key, i) => [

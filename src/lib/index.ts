@@ -1,5 +1,6 @@
-import Select from '@/components/Select.vue'
-
+import 'uno.css'
+import Select from './components/Select.vue'
+export const VueSelect = Select
 declare module 'vue' {
   export interface GlobalComponents {
     VueSelect: typeof Select
