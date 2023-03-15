@@ -76,7 +76,7 @@ export default defineComponent({
             props.class,
           ]}
         >
-          <div class="flex flex-wrap gap-1 bg-white p-1 rounded-sm">
+          <div class="flex flex-wrap gap-1 bg-white p-1 rounded-sm w-full">
             {service.model.value.map((option, index) => (
               <Select.Selected
                 tag="span"

@@ -180,3 +180,7 @@ export function findArray(thing) {
 export function sleep(t = 0) {
   return new Promise((rs) => setTimeout(rs, t))
 }
+
+export function ns(s: string | TemplateStringsArray) {
+  return `v3s-${s}`
+}

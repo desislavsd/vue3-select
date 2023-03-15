@@ -1,6 +1,6 @@
 import { useIntersectionObserver } from '@/capi'
 import { Item, ItemStateful } from '@/types'
-import { defineHook } from '@/utils'
+import { defineHook, ns } from '@/utils'
 import {
   computed,
   getCurrentInstance,
@@ -81,6 +81,7 @@ const definition = defineHook(
       opened: false,
       disabled: toRef(props, 'disabled'),
       readonly: toRef(props, 'readonly'),
+      typing: toRef(phrase, 'typing'),
       mode: toRef(items.flags, 'mode'),
     })
 
@@ -336,6 +337,11 @@ const definition = defineHook(
             return {
               id: props.id,
               ...attrs,
+              class: [
+                Object.entries(flags)
+                  .filter(([name, value]) => value && typeof value == 'boolean')
+                  .map((e) => `--${e[0]}`),
+              ],
               ...(props.accessible && {
                 id: unref(ids).root,
                 'aria-haspopup': 'listbox',
@@ -350,7 +356,7 @@ const definition = defineHook(
         input: (() => {
           const attrs = {
             autocomplete: 'off',
-            type: 'search',
+            type: 'text',
             readonly: flags.readonly,
             disabled: flags.disabled,
             ref: (e: any) => (els.input = e),
@@ -392,7 +398,7 @@ const definition = defineHook(
             }),
           }))
         })(),
-        option(option: ItemStateful) {
+        option({ option }: { option: ItemStateful }) {
           return {
             ...(props.accessible && {
               id: unref(ids).option(option),
@@ -412,27 +418,37 @@ const definition = defineHook(
               ev.stopPropagation()
               select([option], true)
             },
+            class: [
+              (['disabled', 'pointed', 'selected'] as const)
+                .filter((e) => option[e])
+                .map((e) => `--${e}`),
+              option.isGroup() && '--group',
+            ],
           }
         },
-        selected(option: Item, index: number) {
+        selected({ option, index }: { option: Item; index: number }) {
           return {
             ...(props.accessible && {
               'aria-disabled': props.disabled || props.readonly || undefined,
             }),
+            tabindex: -1,
             onClick: (ev: Event) => {
               flags.readonly || flags.disabled || model.remove(index)
             },
           }
         },
         toggle: {
+          tabindex: -1,
+          class: [ns`btn`],
           onClick(ev: MouseEvent) {
             ev.stopPropagation()
             flags.opened ? close() : open()
           },
         },
         clear: {
+          tabindex: -1,
+          class: [ns`btn`],
           onClick(ev: MouseEvent) {
-            ev.stopPropagation()
             model.clear()
           },
         },

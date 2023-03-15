@@ -46,3 +46,11 @@ export type UnionToIntersection<U> = Pretty<
 export type Pretty<T> = {
   [K in keyof T]: T[K]
 } & {}
+
+export type PartialRecursive<T extends object> = {
+  [K in keyof T]?: T[K] extends object ? PartialRecursive<T[K]> : T[K]
+}
+
+export type Require<T extends object, TRKeys extends keyof T> = Pretty<
+  Required<Pick<T, TRKeys>> & Omit<T, TRKeys>
+>
